@@ -2,33 +2,11 @@ package mojo;
 
 import core.InferInstaller;
 import core.InferRunner;
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
 import javax.inject.Inject;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
-import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -51,14 +29,9 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(property = "infer.resultsDir", defaultValue = "${project.build.directory}/infer-out")
     private String resultsDir;
 
-//    @Parameter(property = "infer.failOnIssue", defaultValue = "false")
-//    private boolean failOnIssue;
-
-//    @Parameter(property = "infer.additionalArgs")
-//    private java.util.List<String> additionalInferArgs;
-
-    public void execute() throws MojoExecutionException {
-        Path inferExe = installer.installInfer();
+    @Override
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        Path inferExe = installer.tryInstallInfer();
 
         runner.setProject(project);
         runner.setResultsDir(resultsDir);

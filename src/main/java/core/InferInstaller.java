@@ -3,7 +3,6 @@ package core;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpRequest;
@@ -24,6 +23,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.logging.Logger;
 
 @Named
@@ -33,13 +33,19 @@ public class InferInstaller {
     @Inject
     private Logger logger;
 
+    @Inject
+    private HttpClientFactory httpClientFactory;
+
     private static final URI INFER_DOWNLOAD_URI = URI.create("https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz");
     private static final int POSIX_EXECUTE_PERMISSIONS = 73;
+    private static final Set<PosixFilePermission> EXECUTE_PERMISSIONS = EnumSet.of(PosixFilePermission.OWNER_EXECUTE,
+                                                                                   PosixFilePermission.GROUP_EXECUTE,
+                                                                                   PosixFilePermission.OTHERS_EXECUTE);
 
     public InferInstaller() {
     }
 
-    public Path installInfer() throws MojoExecutionException {
+    public Path tryInstallInfer() throws MojoExecutionException, MojoFailureException {
         URL url = null;
 
         try {
@@ -47,9 +53,9 @@ public class InferInstaller {
 
             url = INFER_DOWNLOAD_URI.toURL();
 
-            Path fileNamePath = Path.of(url.getPath()).getFileName();
-            Path tempDir = Files.createTempDirectory("infer-download-");
-            Path downloadedFilePath = tempDir.resolve(fileNamePath);
+            Path inferTarballFileName = Path.of(url.getPath()).getFileName();
+            Path inferDownloadTmpDir = Files.createTempDirectory("infer-download-");
+            Path inferTarballTmpDirFilePath = inferDownloadTmpDir.resolve(inferTarballFileName);
 
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(INFER_DOWNLOAD_URI)
@@ -59,57 +65,65 @@ public class InferInstaller {
 
             logger.info("Downloading Infer from: " + request.uri());
 
-            HttpResponse<Path> response = HttpClientFactory.getHttpClient().send(
+            HttpResponse<Path> response = httpClientFactory.getHttpClient().send(
                 request,
-                HttpResponse.BodyHandlers.ofFile(downloadedFilePath)
+                HttpResponse.BodyHandlers.ofFile(inferTarballTmpDirFilePath)
             );
 
             if (response.statusCode() != 200) {
-                throw new IOException("Failed to download Infer from " + INFER_DOWNLOAD_URI + ". HTTP status " + response.statusCode());
+                throw new MojoExecutionException("Failed to download Infer from " + INFER_DOWNLOAD_URI + ". HTTP status " + response.statusCode());
             }
 
-            logger.info("Downloaded to temp: " + downloadedFilePath);
+            logger.info("Successfully downloaded to tmp dir: " + inferTarballTmpDirFilePath);
 
-            Path extractRoot = Path.of(System.getProperty("user.home"), "Downloads");
-            Files.createDirectories(extractRoot);
-            untar(downloadedFilePath, extractRoot);
+            Path userHomeDownloadsPath = Path.of(System.getProperty("user.home"), "Downloads");
+            Files.createDirectories(userHomeDownloadsPath);
 
-            Path inferExe = extractRoot
+            untar(inferTarballTmpDirFilePath, userHomeDownloadsPath);
+
+            Path inferExe = userHomeDownloadsPath
                 .resolve("infer-linux-x86_64-v1.2.0")
                 .resolve("bin")
                 .resolve("infer");
-            logger.info("Found infer executable: " + inferExe);
+            logger.info("Resolved Infer executable: " + inferExe);
 
-            cleanupInferTarball(tempDir);
+            cleanupInferTarballTmpDir(inferDownloadTmpDir);
 
             return inferExe;
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException | MojoFailureException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            final String errMsg = String.format("Unable to get Infer from URL: %s! Cannot continue Infer check.", url);
-            logger.error(errMsg, e);
-            throw new MojoExecutionException(errMsg, e);
+
+            if (e instanceof MojoFailureException) {
+                logger.warn("Failure occurred when attempting to install Infer. Continuing in potentially unstable state.", e);
+                throw new MojoFailureException("Failure occurred when attempting to install Infer", e);
+            }
+
+            logger.error("Unable to get Infer from URL:" + url + "! Cannot continue Infer check.", e);
+            throw new MojoExecutionException("Error occurred when attempting to install Infer", e);
         }
     }
 
-    private void untar(Path downloadedFilePath, Path extractRoot) throws IOException {
-        logger.info("Extracting " + downloadedFilePath + " to " + extractRoot);
-        try (InputStream fis = new FileInputStream(downloadedFilePath.toFile());
-            BufferedInputStream bis = new BufferedInputStream(fis);
-            XZCompressorInputStream xzIn = new XZCompressorInputStream(bis);
-            TarArchiveInputStream tarIn = new TarArchiveInputStream(xzIn)) {
+    private void untar(Path inferTarballTmpDirFilePath, Path userHomeDownloadsPath)
+        throws MojoExecutionException, MojoFailureException, IOException {
+        logger.info("Extracting " + inferTarballTmpDirFilePath + " to " + userHomeDownloadsPath);
 
-            TarArchiveEntry ae;
-            while ((ae = tarIn.getNextEntry()) != null) {
+        try (var fileInputStream = new FileInputStream(inferTarballTmpDirFilePath.toFile());
+            var bufferedInputStream = new BufferedInputStream(fileInputStream);
+            var xzCompressorInputStream = new XZCompressorInputStream(bufferedInputStream);
+            var tarArchiveInputStream = new TarArchiveInputStream(xzCompressorInputStream)) {
 
+            TarArchiveEntry tarArchiveEntry;
+
+            while ((tarArchiveEntry = tarArchiveInputStream.getNextEntry()) != null) {
                 // Normalize and prevent ZipSlip
-                Path target = extractRoot.resolve(ae.getName()).normalize();
-                if (!target.startsWith(extractRoot)) {
-                    throw new IOException("Blocked suspicious entry: " + ae.getName());
+                Path target = userHomeDownloadsPath.resolve(tarArchiveEntry.getName()).normalize();
+                if (!target.startsWith(userHomeDownloadsPath)) {
+                    throw new MojoExecutionException("Potential ZipSlip detected from Infer tarball. Blocked suspicious entry: " + tarArchiveEntry.getName());
                 }
 
-                if (ae.isDirectory()) {
+                if (tarArchiveEntry.isDirectory()) {
                     Files.createDirectories(target);
                     continue;
                 }
@@ -117,50 +131,75 @@ public class InferInstaller {
                 // Ensure parent dirs exist
                 Files.createDirectories(target.getParent());
 
-                if (ae.isSymbolicLink()) {
-                    Path linkTarget = Path.of(ae.getLinkName());
-                    // Remove existing if any (to allow re-extraction)
-                    try {
-                        Files.deleteIfExists(target);
-                    } catch (IOException ignore) {}
-                    Files.createSymbolicLink(target, linkTarget);
-                } else if (ae.isLink()) {
-                    // Hard link: create as a copy of the link target if present
-                    Path linkTarget = extractRoot.resolve(ae.getLinkName()).normalize();
-                    if (!Files.exists(linkTarget, LinkOption.NOFOLLOW_LINKS)) {
-                        logger.warn("Hard link target does not exist yet: " + ae.getLinkName());
-                    } else {
-                        Files.copy(linkTarget, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
-                    }
+                if (tarArchiveEntry.isSymbolicLink()) {
+                    handleSymlink(tarArchiveEntry, target);
+                } else if (tarArchiveEntry.isLink()) {
+                    handleHardLink(userHomeDownloadsPath, tarArchiveEntry, target);
                 } else {
-                    // Regular file
-                    Files.copy(tarIn, target, StandardCopyOption.REPLACE_EXISTING);
-
-                    // Restore executable perms if mode has any exec bit
-                    int mode = ae.getMode();
-                    boolean anyExec = (mode & POSIX_EXECUTE_PERMISSIONS) != 0;
-                    if (anyExec) {
-                        Set<PosixFilePermission> perms = Files.getPosixFilePermissions(target);
-                        Set<PosixFilePermission> withExec = EnumSet.copyOf(perms);
-                        withExec.add(PosixFilePermission.OWNER_EXECUTE);
-                        withExec.add(PosixFilePermission.GROUP_EXECUTE);
-                        withExec.add(PosixFilePermission.OTHERS_EXECUTE);
-                        Files.setPosixFilePermissions(target, withExec);
-                    }
+                    handleRegularFile(tarArchiveInputStream, target, tarArchiveEntry);
                 }
             }
-        } catch (IOException e) {
-            logger.error("Error untarring Infer: " + e.getMessage(), e);
-            throw e;
+        } catch (IOException | MojoFailureException | MojoExecutionException e) {
+            if (e instanceof MojoFailureException) {
+                logger.warn("Failure untarring Infer", e);
+                throw new MojoFailureException("Failure occurred when untarring Infer tarball", e);
+            }
+
+            logger.error("Error untarring Infer", e);
+            throw new MojoExecutionException("Error occurred when untarring Infer tarball", e);
         }
     }
 
-    private void cleanupInferTarball(Path tempDir) throws MojoExecutionException {
+    private void handleSymlink(TarArchiveEntry tarArchiveEntry, Path target) throws MojoFailureException, IOException {
+        Path linkTarget = Path.of(tarArchiveEntry.getLinkName());
+
+        // Remove existing if any (to allow re-extraction)
         try {
-            FileUtils.deleteDirectory(tempDir.toFile());
-            logger.info("Cleaned up temp dir: " + tempDir);
-        } catch (IOException cleanupEx) {
-            throw new MojoExecutionException("Failed to cleanup temp dir: " + tempDir, cleanupEx);
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            logger.warn("Symlink removal failed on: " + target);
+            throw new MojoFailureException("Failure removing symlink in Infer tarball" + e);
+        }
+
+        Files.createSymbolicLink(target, linkTarget);
+    }
+
+    private void handleHardLink(Path userHomeDownloadsPath, TarArchiveEntry tarArchiveEntry, Path target)
+        throws IOException {
+        // Hard link: create as a copy of the link target if present
+        Path linkTarget = userHomeDownloadsPath.resolve(tarArchiveEntry.getLinkName()).normalize();
+
+        if (Files.exists(linkTarget, LinkOption.NOFOLLOW_LINKS)) {
+            Files.copy(linkTarget, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        } else {
+            logger.warn("Hard link target does not exist yet: " + tarArchiveEntry.getLinkName());
+        }
+    }
+
+    private static void handleRegularFile(TarArchiveInputStream tarArchiveInputStream, Path target,
+        TarArchiveEntry tarArchiveEntry) throws IOException {
+        Files.copy(tarArchiveInputStream, target, StandardCopyOption.REPLACE_EXISTING);
+
+        // Restore executable perms if mode has any exec bit
+        final int mode = tarArchiveEntry.getMode();
+        final boolean isNonExecutableBit = (mode & POSIX_EXECUTE_PERMISSIONS) == 0;
+
+        if (isNonExecutableBit) {
+            return; //no executable perms to restore
+        }
+
+        final Set<PosixFilePermission> perms = Files.getPosixFilePermissions(target);
+        perms.addAll(EXECUTE_PERMISSIONS);
+        Files.setPosixFilePermissions(target, perms);
+    }
+
+    private void cleanupInferTarballTmpDir(Path tmpDir) throws MojoFailureException {
+        try {
+            FileUtils.deleteDirectory(tmpDir.toFile());
+            logger.info("Successfully cleaned up tmp dir used to download Infer: " + tmpDir);
+        } catch (IOException e) {
+            logger.warn("Failure occurred during cleanup of tmp dir used to download Infer. The tmp dir will need to be cleaned up manually: " + tmpDir, e);
+            throw new MojoFailureException("Failed to cleanup tmp dir used to download Infer: " + tmpDir, e);
         }
     }
 }
