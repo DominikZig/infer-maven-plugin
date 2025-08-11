@@ -26,7 +26,10 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", required = true, readonly = true)
     private MavenProject project;
 
-    @Parameter(property = "infer.resultsDir", defaultValue = "${project.build.directory}/infer-out")
+    @Parameter(property = "failOnIssue", defaultValue = "true")
+    private boolean failOnIssue;
+
+    @Parameter(property = "resultsDir", defaultValue = "${project.build.directory}/infer-out")
     private String resultsDir;
 
     @Override
@@ -34,6 +37,7 @@ public class FbInferMojo extends AbstractMojo {
         Path inferExe = installer.tryInstallInfer();
 
         runner.setProject(project);
+        runner.setFailOnIssue(failOnIssue);
         runner.setResultsDir(resultsDir);
         runner.runInferOnProject(inferExe);
     }
