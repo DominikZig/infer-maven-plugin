@@ -31,6 +31,7 @@ public class InferRunner {
     private static final String JAVAC_DEBUG_OPTION = "-g";
     private static final String JAVAC_DEST_DIRECTORY_OPTION = "-d";
     private static final String JAVAC_ARGFILE_PREFIX = "@";
+    public static final String INFER_FAIL_ON_ISSUE_OPTION = "--fail-on-issue";
     private static final String INFER_RESULTS_DIR_OPTION = "--results-dir";
     private static final String INFER_ARG_TERMINATOR = "--";
     private static final long PROCESS_MAX_TIMEOUT = 1L;
@@ -41,6 +42,8 @@ public class InferRunner {
     private Logger logger;
 
     private MavenProject project;
+
+    private boolean failOnIssue;
 
     private String resultsDir;
 
@@ -86,10 +89,10 @@ public class InferRunner {
             List<String> javacArgs = javacArgBuilder(compileClasspath, argfileWithJavaSources);
             List<String> inferArgs = inferArgBuilder(inferExe.toString(), resultsDirPath.toString(), javacArgs);
 
-            int runExit = executeInferCommands(inferArgs, project.getBasedir().toPath());
+            int exitCode = executeInferCommands(inferArgs, project.getBasedir().toPath());
 
             // fail the build if Infer found issues (Infer returns 2 when issues found)
-            if (runExit == INFER_ISSUES_FOUND) {
+            if (failOnIssue && exitCode == INFER_ISSUES_FOUND) {
                 throw new MojoExecutionException("Infer analysis completed with issues found. Results in: " + resultsDirPath);
             }
 
@@ -161,6 +164,7 @@ public class InferRunner {
         return Stream.concat(
             Stream.of(
                 inferExeOption,
+                INFER_FAIL_ON_ISSUE_OPTION,
                 INFER_RESULTS_DIR_OPTION,
                 resultsDirPathValue,
                 INFER_ARG_TERMINATOR
@@ -184,21 +188,21 @@ public class InferRunner {
 
             if (!finished) {
                 process.destroyForcibly();
-                throw new MojoExecutionException("Timeout running: " + inferCommands.getFirst());
+                throw new MojoExecutionException("Infer analysis errored with timeout running command: " + inferCommands.getFirst());
             }
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new MojoExecutionException("Interrupted running: " + inferCommands.getFirst(), e);
+            throw new MojoExecutionException("Infer analysis errored with interrupted running command: " + inferCommands.getFirst(), e);
         }
 
-        int exitFlag = process.exitValue();
+        int exitCode = process.exitValue();
 
-        if (exitFlag != NORMAL_TERMINATION_FLAG && exitFlag != INFER_ISSUES_FOUND) {
-            throw new MojoExecutionException("Command exited with code " + exitFlag + ": " + String.join(" ", inferCommands));
+        if (exitCode != NORMAL_TERMINATION_FLAG && exitCode != INFER_ISSUES_FOUND) {
+            throw new MojoExecutionException("Infer analysis errored with unexpected exit code " + exitCode + ": " + String.join(" ", inferCommands));
         }
 
-        return exitFlag;
+        return exitCode;
     }
 
     private void logProcessOutput(Process process) throws IOException {
@@ -211,6 +215,10 @@ public class InferRunner {
 
     public void setProject(MavenProject project) {
         this.project = project;
+    }
+
+    public void setFailOnIssue(boolean failOnIssue) {
+        this.failOnIssue = failOnIssue;
     }
 
     public void setResultsDir(String resultsDir) {
