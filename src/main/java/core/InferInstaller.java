@@ -186,7 +186,7 @@ public class InferInstaller {
         }
     }
 
-    private static void handleRegularFile(TarArchiveInputStream tarArchiveInputStream, Path target,
+    private void handleRegularFile(TarArchiveInputStream tarArchiveInputStream, Path target,
         TarArchiveEntry tarArchiveEntry) throws IOException {
         Files.copy(tarArchiveInputStream, target, StandardCopyOption.REPLACE_EXISTING);
 
