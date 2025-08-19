@@ -1,5 +1,6 @@
 package core;
 
+import Utils.TarContent;
 import java.io.File;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
@@ -13,7 +14,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.logging.Logger;
-import org.junit.jupiter.api.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -28,6 +28,10 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Flow;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
@@ -40,9 +44,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -167,11 +173,11 @@ class InferInstallerTest {
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
-        var exCaptor = ArgumentCaptor.forClass(Throwable.class);
-        verify(logger, times(1)).error(errorLogCaptor.capture(), exCaptor.capture());
+        var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
+        verify(logger, times(1)).error(errorLogCaptor.capture(), errorExCaptor.capture());
 
         assertThat(errorLogCaptor.getAllValues())
-            .containsExactly("Unable to get Infer from URL:https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz! Cannot continue Infer check.");
+            .containsExactly("Unable to get Infer from URL:https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz! Cannot continue Infer analysis.");
         assertTmpDirCleanup();
     }
 
@@ -202,11 +208,14 @@ class InferInstallerTest {
             .isEqualTo("Error occurred when untarring Infer tarball");
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
-        var exCaptor = ArgumentCaptor.forClass(Throwable.class);
-        verify(logger, times(2)).error(errorLogCaptor.capture(), exCaptor.capture());
+        var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
+        verify(logger, times(1)).error(errorLogCaptor.capture());
+        verify(logger, times(2)).error(errorLogCaptor.capture(), errorExCaptor.capture());
 
-        List<String> expectedErrorLogs = List.of("An error occurred when untarring the Infer tarball.",
-            "Unable to get Infer from URL:https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz! Cannot continue Infer check.");
+        List<String> expectedErrorLogs = List.of(
+            "Error occurred when untarring the Infer tarball due to potential ZipSlip detected.",
+            "An error occurred when untarring the Infer tarball.",
+            "Unable to get Infer from URL:https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz! Cannot continue Infer analysis.");
         assertThat(errorLogCaptor.getAllValues()).containsExactlyElementsIn(expectedErrorLogs);
         assertTmpDirCleanup();
     }
@@ -331,16 +340,68 @@ class InferInstallerTest {
         assertThat(mojoFailureException).hasMessageThat().isEqualTo("Failure occurred when attempting to install Infer");
         assertThat(mojoFailureException).hasCauseThat().hasMessageThat().isEqualTo("Failure occurred when untarring Infer tarball");
 
-        var warnMsgCaptor = ArgumentCaptor.forClass(String.class);
+        var warnLogCaptor = ArgumentCaptor.forClass(String.class);
         var warnExCaptor = ArgumentCaptor.forClass(Throwable.class);
 
         // One warn without exception from handleSymlink
         verify(logger, times(1)).warn(ArgumentMatchers.startsWith("Symlink removal failed on: "));
 
         // Two warns with exception: from untar and outer tryInstallInfer
-        verify(logger, times(2)).warn(warnMsgCaptor.capture(), warnExCaptor.capture());
-        assertThat(warnMsgCaptor.getAllValues()).contains("A failure occurred when untarring the Infer tarball. This could be due to corruption in extracting the files.");
-        assertThat(warnMsgCaptor.getAllValues()).contains("Failure occurred when attempting to install Infer. Continuing in potentially unstable state.");
+        verify(logger, times(2)).warn(warnLogCaptor.capture(), warnExCaptor.capture());
+        assertThat(warnLogCaptor.getAllValues()).contains("A failure occurred when untarring the Infer tarball. This could be due to corruption in extracting the files.");
+        assertThat(warnLogCaptor.getAllValues()).contains("Failure occurred when attempting to install Infer. Continuing in potentially unstable state.");
+        assertTmpDirCleanup();
+    }
+
+    @DisplayName("""
+         Given file is available to download\s
+         And directory structure is setup with a symlink entry\s
+         And no symlink failure during untar occurs\s
+         When plugin tries to install Infer\s
+         Then symlink is successfully created\s
+         And successfully installs, downloads and extracts Infer and then\s
+         And successfully cleans up tmp dirs
+       """)
+    @Test
+    void tryInstallInferCreatesSymlink_invokesCreateSymbolicLink(@TempDir Path dummyHome) throws Exception {
+        System.setProperty("user.home", dummyHome.toString());
+        String rootDir = "infer-linux-x86_64-v1.2.0";
+
+        // Archive includes:
+        // - infer executable (so installation path resolves)
+        // - a symlink entry pointing to "target-symlink"
+        byte[] tarBytes = createTarXzWithNormalSymlinkAndInfer(rootDir);
+
+        when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
+
+        Path expectedSymlinkTarget = dummyHome.resolve("Downloads")
+            .resolve(rootDir)
+            .resolve("some")
+            .resolve("symlink")
+            .normalize();
+        Path expectedLinkTarget = Path.of("target-symlink");
+
+        try (MockedStatic<Files> files = mockStatic(Files.class, CALLS_REAL_METHODS)) {
+            // Stub to no-op and return the target path
+            files.when(() -> Files.createSymbolicLink(eq(expectedSymlinkTarget), eq(expectedLinkTarget)))
+                .thenAnswer(inv -> expectedSymlinkTarget);
+
+            Path inferExe = installer.tryInstallInfer();
+
+            // Verify symlink creation was attempted with the expected paths
+            files.verify(() -> Files.createSymbolicLink(eq(expectedSymlinkTarget), eq(expectedLinkTarget)));
+
+            // Installation still succeeds and returns the expected infer path
+            Path expectedInferPath = dummyHome.resolve("Downloads")
+                .resolve(rootDir)
+                .resolve("bin")
+                .resolve("infer");
+            assertThat(inferExe).isEqualTo(expectedInferPath);
+            assertThat(Files.exists(expectedInferPath)).isTrue();
+        }
+
         assertTmpDirCleanup();
     }
 
@@ -366,14 +427,14 @@ class InferInstallerTest {
         Path inferExe = installer.tryInstallInfer();
         assertThat(Files.exists(inferExe)).isTrue();
 
-        var infoCaptor = ArgumentCaptor.forClass(String.class);
-        verify(logger, atLeastOnce()).info(infoCaptor.capture());
-        var infos = infoCaptor.getAllValues();
-        assertThat(infos.stream().anyMatch(s -> s.equals("Attempting to download Infer"))).isTrue();
-        assertThat(infos.stream().anyMatch(s -> s.startsWith("Downloading Infer from:"))).isTrue();
-        assertThat(infos.stream().anyMatch(s -> s.startsWith("Successfully downloaded to tmp dir:"))).isTrue();
-        assertThat(infos.stream().anyMatch(s -> s.startsWith("Extracting "))).isTrue();
-        assertThat(infos.stream().anyMatch(s -> s.startsWith("Resolved Infer executable: "))).isTrue();
+        var infoLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).info(infoLogCaptor.capture());
+        var infoLogMessages = infoLogCaptor.getAllValues();
+        assertThat(infoLogMessages.stream().anyMatch(s -> s.equals("Attempting to download Infer"))).isTrue();
+        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Downloading Infer from:"))).isTrue();
+        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Successfully downloaded to tmp dir:"))).isTrue();
+        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Extracting "))).isTrue();
+        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Resolved Infer executable: "))).isTrue();
         assertTmpDirCleanup();
     }
 
@@ -416,8 +477,8 @@ class InferInstallerTest {
                 .isEqualTo("Something went wrong during cleanup");
 
             var warnLogCaptor = ArgumentCaptor.forClass(String.class);
-            var exCaptor = ArgumentCaptor.forClass(Throwable.class);
-            verify(logger, atLeastOnce()).warn(warnLogCaptor.capture(), exCaptor.capture());
+            var warnExCaptor = ArgumentCaptor.forClass(Throwable.class);
+            verify(logger, atLeastOnce()).warn(warnLogCaptor.capture(), warnExCaptor.capture());
 
             assertThat(warnLogCaptor.getAllValues().getFirst())
                 .contains("Failure occurred during cleanup of tmp dir used to download Infer. The tmp dir will need to be cleaned up manually:");
@@ -519,7 +580,7 @@ class InferInstallerTest {
         assertTmpDirCleanup();
     }
 
-    private static HttpResponse<Path> successfulInferUrlHttpResponse(InvocationOnMock inv, byte[] tarBytes) {
+    private HttpResponse<Path> successfulInferUrlHttpResponse(InvocationOnMock inv, byte[] tarBytes) {
         HttpResponse.BodyHandler<Path> handler = inv.getArgument(1);
         HttpResponse.ResponseInfo info = new HttpResponse.ResponseInfo() {
             @Override
@@ -544,7 +605,7 @@ class InferInstallerTest {
         return response;
     }
 
-    private static byte[] createTarXz(byte[] fileContent, String rootDirName) throws IOException {
+    private byte[] createTarXz(byte[] fileContent, String rootDirName) throws IOException {
         return buildTarXz(rootDirName, (root, tar) -> {
             TarArchiveEntry fileEntry = createFile(fileContent, root + "bin/infer");
             tar.putArchiveEntry(fileEntry);
@@ -553,7 +614,7 @@ class InferInstallerTest {
         });
     }
 
-    private static byte[] createTarXzWithZipSlip(byte[] fileContent) throws IOException {
+    private byte[] createTarXzWithZipSlip(byte[] fileContent) throws IOException {
         return buildTarXz("root", (root, tar) -> {
             TarArchiveEntry fileEntry = createFile(fileContent, "../evil.txt"); // ZipSlip attempt
             tar.putArchiveEntry(fileEntry);
@@ -562,7 +623,7 @@ class InferInstallerTest {
         });
     }
 
-    private static byte[] createTarXzWithHardLinkExistingTarget(byte[] originalContent, String rootDirName) throws IOException {
+    private byte[] createTarXzWithHardLinkExistingTarget(byte[] originalContent, String rootDirName) throws IOException {
         return buildTarXz(rootDirName, (root, tar) -> {
             // original file
             TarArchiveEntry original = createFile(originalContent, root + "bin/original.txt");
@@ -587,7 +648,7 @@ class InferInstallerTest {
         });
     }
 
-    private static byte[] createTarXzWithHardLinkMissingTarget(byte[] inferContent, String rootDirName,
+    private byte[] createTarXzWithHardLinkMissingTarget(byte[] inferContent, String rootDirName,
         String missingTargetRelativePath) throws IOException {
         return buildTarXz(rootDirName, (root, tar) -> {
             // hard link that points to missing target
@@ -606,7 +667,7 @@ class InferInstallerTest {
         });
     }
 
-    private static byte[] createTarXzWithSymlinkOverNonEmptyDir(String rootDirName) throws IOException {
+    private byte[] createTarXzWithSymlinkOverNonEmptyDir(String rootDirName) throws IOException {
         return buildTarXz(rootDirName, (root, tar) -> {
             // create a non-empty directory that we will try to replace with a symlink of same name
             String dir = root + "linkdir/";
@@ -632,7 +693,26 @@ class InferInstallerTest {
         });
     }
 
-    private static byte[] createTarXzWithExecBits(byte[] fileContent, String rootDirName) throws IOException {
+    private byte[] createTarXzWithNormalSymlinkAndInfer(String rootDirName) throws IOException {
+        return buildTarXz(rootDirName, (root, tar) -> {
+            // include infer executable
+            byte[] inferContent = "#!/bin/sh\necho infer".getBytes(StandardCharsets.UTF_8);
+            TarArchiveEntry infer = createFile(inferContent, root + "bin/infer");
+            tar.putArchiveEntry(infer);
+            tar.write(inferContent);
+            tar.closeArchiveEntry();
+
+            // symlink entry (no pre-existing path with that name, so deleteIfExists returns false)
+            TarArchiveEntry symlink = new TarArchiveEntry(root + "some/symlink", TarConstants.LF_SYMLINK);
+            symlink.setLinkName("target-symlink");
+            symlink.setMode(493);
+            symlink.setSize(0);
+            tar.putArchiveEntry(symlink);
+            tar.closeArchiveEntry();
+        });
+    }
+
+    private byte[] createTarXzWithExecBits(byte[] fileContent, String rootDirName) throws IOException {
         return buildTarXz(rootDirName, (root, tar) -> {
             TarArchiveEntry fileEntry = new TarArchiveEntry(root + "bin/infer");
             fileEntry.setMode(493); // 0755 decimal - has 0755 (exec) mode
@@ -643,12 +723,7 @@ class InferInstallerTest {
         });
     }
 
-    @FunctionalInterface
-    private interface TarContent {
-        void write(String root, TarArchiveOutputStream tar) throws IOException;
-    }
-
-    private static byte[] buildTarXz(String rootDirName, TarContent content) throws IOException {
+    private byte[] buildTarXz(String rootDirName, TarContent content) throws IOException {
         var byteArrayOutputStream = new ByteArrayOutputStream();
         try (var xzCompressorOutputStream = new XZCompressorOutputStream(byteArrayOutputStream);
             var tar = new TarArchiveOutputStream(xzCompressorOutputStream)
@@ -660,7 +735,7 @@ class InferInstallerTest {
         return byteArrayOutputStream.toByteArray();
     }
 
-    private static String createRoot(String rootDirName, TarArchiveOutputStream tarArchiveOutputStream)
+    private String createRoot(String rootDirName, TarArchiveOutputStream tarArchiveOutputStream)
         throws IOException {
         tarArchiveOutputStream.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
 
@@ -682,7 +757,7 @@ class InferInstallerTest {
         return root;
     }
 
-    private static TarArchiveEntry createFile(byte[] fileContent, String filePath) {
+    private TarArchiveEntry createFile(byte[] fileContent, String filePath) {
         TarArchiveEntry fileEntry = new TarArchiveEntry(filePath);
         int mode = 420;
         fileEntry.setMode(mode);
@@ -692,16 +767,16 @@ class InferInstallerTest {
 
     private void assertTmpDirCleanup() {
         // Verify cleanup occurred by inspecting info logs and checking the directory was deleted
-        var infoCaptor = ArgumentCaptor.forClass(String.class);
-        verify(logger, atLeastOnce()).info(infoCaptor.capture());
+        var infoLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).info(infoLogCaptor.capture());
         String cleanedMsgPrefix = "Successfully cleaned up tmp dir used to download Infer: ";
 
-        assertThat(infoCaptor.getAllValues().stream()
+        assertThat(infoLogCaptor.getAllValues().stream()
             .anyMatch(s -> s.startsWith(cleanedMsgPrefix)))
             .isTrue();
 
         // Ensure every cleaned tmp dir mentioned in logs was actually removed
-        assertThat(infoCaptor.getAllValues().stream()
+        assertThat(infoLogCaptor.getAllValues().stream()
             .filter(s -> s.startsWith(cleanedMsgPrefix))
             .map(s -> s.substring(cleanedMsgPrefix.length()).trim())
             .map(Path::of)

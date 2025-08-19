@@ -7,7 +7,7 @@
   <groupId>org.domzig</groupId>
   <artifactId>fb-infer-maven-plugin</artifactId>
   <packaging>maven-plugin</packaging>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
 
   <organization>
     <name>Dominik Zig</name>

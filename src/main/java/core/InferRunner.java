@@ -38,8 +38,7 @@ public class InferRunner {
     public static final int NORMAL_TERMINATION_FLAG = 0;
     public static final int INFER_ISSUES_FOUND = 2;
 
-    @Inject
-    private Logger logger;
+    private final Logger logger;
 
     private MavenProject project;
 
@@ -49,7 +48,9 @@ public class InferRunner {
 
     private static final String JAVA_FILE_EXTENSION = ".java";
 
-    public InferRunner() {
+    @Inject
+    public InferRunner(Logger logger) {
+        this.logger = logger;
     }
 
     public void runInferOnProject(Path inferExe) throws MojoExecutionException, MojoFailureException {
@@ -68,13 +69,14 @@ public class InferRunner {
                         (path, attrs) -> isJavaFileType(path))) {
                         javaSourceFiles.addAll(stream.toList());
                     } catch (IOException e) {
+                        logger.error("Error occurred when trying to find Java sources in: " + rootPath);
                         throw new MojoExecutionException("Failed to find Java sources in: " + rootPath, e);
                     }
                 }
             }
 
             if (javaSourceFiles.isEmpty()) {
-                logger.info("No Java sources found in " + javaSourceFiles + ". Skipping Infer analysis.");
+                logger.warn("No Java sources found in " + javaSourceFiles + ". Skipping Infer analysis.");
                 throw new MojoFailureException("No Java sources found; skipping Infer analysis.");
             }
 
@@ -93,15 +95,18 @@ public class InferRunner {
 
             // fail the build if Infer found issues (Infer returns 2 when issues found)
             if (failOnIssue && exitCode == INFER_ISSUES_FOUND) {
+                logger.error("Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.");
                 throw new MojoExecutionException("Infer analysis completed with issues found. Results in: " + resultsDirPath);
             }
 
             logger.info("Infer analysis completed. Results in: " + resultsDirPath);
-        } catch (IOException | MojoFailureException e) {
+        } catch (IOException | MojoFailureException | MojoExecutionException e) {
             if (e instanceof MojoFailureException) {
+                logger.warn("A failure occurred when running Infer on the project.", e);
                 throw new MojoFailureException("Failure running Infer on project", e);
             }
 
+            logger.error("An error occurred when running Infer on the project.", e);
             throw new MojoExecutionException("Error running Infer on project", e);
         }
     }
@@ -115,6 +120,7 @@ public class InferRunner {
             List<String> compileClasspathElements = project.getCompileClasspathElements();
             return String.join(File.pathSeparator, compileClasspathElements);
         } catch (DependencyResolutionRequiredException e) {
+            logger.error("An error occurred when compiling the classpath and the classpath could not be resolved");
             throw new MojoExecutionException("Compile classpath could not be resolved", e);
         }
     }
@@ -188,17 +194,20 @@ public class InferRunner {
 
             if (!finished) {
                 process.destroyForcibly();
+                logger.error("An error occurred during Infer due to timeout running command. See stacktrace for more info.");
                 throw new MojoExecutionException("Infer analysis errored with timeout running command: " + inferCommands.getFirst());
             }
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            logger.error("An error occurred during Infer due to an interruption in the thread running command. See stacktrace for more info.");
             throw new MojoExecutionException("Infer analysis errored with interrupted running command: " + inferCommands.getFirst(), e);
         }
 
         int exitCode = process.exitValue();
 
         if (exitCode != NORMAL_TERMINATION_FLAG && exitCode != INFER_ISSUES_FOUND) {
+            logger.error("An error occurred during Infer due to unexpected exit code returned by the process running Infer. See stacktrace for more info.");
             throw new MojoExecutionException("Infer analysis errored with unexpected exit code " + exitCode + ": " + String.join(" ", inferCommands));
         }
 
@@ -209,7 +218,7 @@ public class InferRunner {
         try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
             reader.lines().map(String::stripTrailing)
                 .filter(line -> !line.isBlank())
-                .forEach(line -> logger.info(line));
+                .forEach(logger::info);
         }
     }
 

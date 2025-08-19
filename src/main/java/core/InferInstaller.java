@@ -97,7 +97,7 @@ public class InferInstaller {
             return inferExe;
         } catch (IOException | InterruptedException | MojoFailureException | MojoExecutionException e) {
             if (inferDownloadTmpDir != null) {
-                cleanupInferTarballTmpDir(inferDownloadTmpDir); //ensure resourcese are cleaned up even if exception is thrown
+                cleanupInferTarballTmpDir(inferDownloadTmpDir); //ensure resources are cleaned up even if exception is thrown
             }
 
             if (e instanceof InterruptedException) {
@@ -109,7 +109,7 @@ public class InferInstaller {
                 throw new MojoFailureException("Failure occurred when attempting to install Infer", e);
             }
 
-            logger.error("Unable to get Infer from URL:" + url + "! Cannot continue Infer check.", e);
+            logger.error("Unable to get Infer from URL:" + url + "! Cannot continue Infer analysis.", e);
             throw new MojoExecutionException(GENERIC_INFER_INSTALLATION_ERROR, e);
         }
     }
@@ -129,6 +129,7 @@ public class InferInstaller {
                 // Normalize and prevent ZipSlip
                 Path target = userHomeDownloadsPath.resolve(tarArchiveEntry.getName()).normalize();
                 if (!target.startsWith(userHomeDownloadsPath)) {
+                    logger.error("Error occurred when untarring the Infer tarball due to potential ZipSlip detected.");
                     throw new MojoExecutionException("Potential ZipSlip detected from Infer tarball. Blocked suspicious entry: " + tarArchiveEntry.getName());
                 }
 
