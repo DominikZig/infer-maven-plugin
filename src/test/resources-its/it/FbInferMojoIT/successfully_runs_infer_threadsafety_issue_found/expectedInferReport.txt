@@ -1,0 +1,13 @@
+#0
+src/main/java/example/ClassWithThreadSafetyIssue.java:16: warning: Thread Safety Violation
+  Unprotected write. Non-private method `ClassWithThreadSafetyIssue$Dinner.makeDinner()` indirectly writes to field `this.mTemperature` outside of synchronization.
+ Reporting because the current class is annotated `@ThreadSafe`, so we assume that this method can run in parallel with other non-private methods in the class (including itself). 
+  14.   
+  15.           public void makeDinner() {
+  16. >             boilWater();
+  17.           }
+  18.   
+
+Found 1 issue
+                        Issue Type(ISSUED_TYPE_ID): #
+  Thread Safety Violation(THREAD_SAFETY_VIOLATION): 1

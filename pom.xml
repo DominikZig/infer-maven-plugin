@@ -72,6 +72,18 @@
       <version>1.4.4</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.soebes.itf.jupiter.extension</groupId>
+      <artifactId>itf-jupiter-extension</artifactId>
+      <version>0.13.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.soebes.itf.jupiter.extension</groupId>
+      <artifactId>itf-assertj</artifactId>
+      <version>0.13.1</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -88,8 +100,47 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.3</version>
         <configuration>
-          <useModulePath>false</useModulePath>
+          <useModulePath>false</useModulePath><!--mvn test-compile org.pitest:pitest-maven:mutationCoverage-->
+          <!--          <debugForkedProcess>true</debugForkedProcess>-->
+          <forkCount>0</forkCount>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.soebes.itf.jupiter.extension</groupId>
+        <artifactId>itf-maven-plugin</artifactId>
+        <version>0.13.1</version>
+        <executions>
+          <execution>
+            <id>installing</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>install</goal>
+              <goal>resources-its</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <!--
+           ! currently needed to run integration tests.
+          -->
+          <systemPropertyVariables>
+            <maven.version>${maven.version}</maven.version>
+            <maven.home>${maven.home}</maven.home>
+          </systemPropertyVariables>
+          <properties>
+          </properties>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.pitest</groupId>

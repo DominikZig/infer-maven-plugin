@@ -1,0 +1,12 @@
+#0
+src/main/java/example/ClassWithNpeIssue.java:10: error: Null Dereference
+  `str` could be null (null value originating from line 9) and is dereferenced. 
+   8.       private static void nullPointerDereference() {
+   9.           String str = null;
+  10. >         int length = str.length();
+  11.       }
+  12.   }
+
+Found 1 issue
+             Issue Type(ISSUED_TYPE_ID): #
+  Null Dereference(NULLPTR_DEREFERENCE): 1
