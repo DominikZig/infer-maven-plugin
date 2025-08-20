@@ -100,9 +100,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.3</version>
         <configuration>
-          <useModulePath>false</useModulePath><!--mvn test-compile org.pitest:pitest-maven:mutationCoverage-->
-          <!--          <debugForkedProcess>true</debugForkedProcess>-->
-          <forkCount>0</forkCount>
+          <useModulePath>false</useModulePath>
         </configuration>
       </plugin>
       <plugin>
