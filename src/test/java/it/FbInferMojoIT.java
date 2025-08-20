@@ -51,4 +51,26 @@ class FbInferMojoIT {
         Path expectedReportPath = Path.of("src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_threadsafety_issue_found/expectedInferReport.txt");
         assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
     }
+
+    @MavenTest
+    void successfully_runs_infer_multiple_issues_found(MavenExecutionResult result) {
+        assertThat(result).isFailure();
+        Path inferOut = result.getMavenProjectResult().getTargetProjectDirectory()
+            .resolve("target")
+            .resolve("infer-out");
+        assertThat(inferOut).isDirectory();
+        Path expectedReportPath = Path.of("src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_multiple_issues_found/expectedInferReport.txt");
+        assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+    }
+
+    @MavenTest
+    void successfully_runs_infer_issues_found_do_not_fail_build(MavenExecutionResult result) {
+        assertThat(result).isSuccessful(); //even though issues are found we do NOT fail build as failOnIssue param is false
+        Path inferOut = result.getMavenProjectResult().getTargetProjectDirectory()
+            .resolve("target")
+            .resolve("infer-out");
+        assertThat(inferOut).isDirectory();
+        Path expectedReportPath = Path.of("src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_issues_found_do_not_fail_build/expectedInferReport.txt");
+        assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+    }
 }
