@@ -95,13 +95,17 @@ public class InferRunner {
 
             // fail the build if Infer found issues (Infer returns 2 when issues found)
             if (failOnIssue && exitCode == INFER_ISSUES_FOUND) {
-                logger.error("Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.");
-                throw new MojoExecutionException("Infer analysis completed with issues found. Results in: " + resultsDirPath);
+                logger.warn("Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.");
+                throw new MojoFailureException("Infer analysis completed with issues found. Results in: " + resultsDirPath);
             }
 
             logger.info("Infer analysis completed. Results in: " + resultsDirPath);
         } catch (IOException | MojoFailureException | MojoExecutionException e) {
             if (e instanceof MojoFailureException) {
+                if (e.getMessage().contains("Infer analysis completed with issues found.")) {
+                    throw new MojoFailureException("Infer analysis completed with issues", e);
+                }
+
                 logger.warn("A failure occurred when running Infer on the project.", e);
                 throw new MojoFailureException("Failure running Infer on project", e);
             }
@@ -180,7 +184,7 @@ public class InferRunner {
     }
 
     private int executeInferCommands(List<String> inferCommands, Path workingDir) throws IOException, MojoExecutionException {
-        logger.info("Running: " + String.join(" ", inferCommands));
+        logger.debug("Running: " + String.join(" ", inferCommands));
 
         var processBuilder = new ProcessBuilder(inferCommands);
         processBuilder.directory(workingDir.toFile());

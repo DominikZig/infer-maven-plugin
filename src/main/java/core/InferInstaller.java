@@ -48,14 +48,23 @@ public class InferInstaller {
         this.httpClientFactory = httpClientFactory;
     }
 
-    public Path tryInstallInfer() throws MojoExecutionException, MojoFailureException {
-        URL url = null;
+    public Path tryInstallInfer(Path installDir) throws MojoExecutionException, MojoFailureException {
+        Path inferExe = installDir
+            .resolve("infer-linux-x86_64-v1.2.0")
+            .resolve("bin")
+            .resolve("infer");
+
+        if (Files.exists(inferExe)) {
+            logger.info("Infer executable already exists in: " + inferExe + ". Using this for Infer analysis.");
+            return inferExe;
+        }
+
         Path inferDownloadTmpDir = null;
 
         try {
             logger.info("Attempting to download Infer");
 
-            url = INFER_DOWNLOAD_URI.toURL();
+            URL url = INFER_DOWNLOAD_URI.toURL();
 
             Path inferTarballFileName = Path.of(url.getPath()).getFileName();
             inferDownloadTmpDir = Files.createTempDirectory("infer-download-");
@@ -67,7 +76,7 @@ public class InferInstaller {
                 .GET()
                 .build();
 
-            logger.info("Downloading Infer from: " + request.uri());
+            logger.debug("Downloading Infer from: " + request.uri());
 
             HttpResponse<Path> response = httpClientFactory.getHttpClient().send(
                 request,
@@ -79,18 +88,18 @@ public class InferInstaller {
                 throw new MojoExecutionException(DOWNLOAD_INFER_INSTALLATION_ERROR + response.statusCode());
             }
 
-            logger.info("Successfully downloaded to tmp dir: " + inferTarballTmpDirFilePath);
+            logger.debug("Successfully downloaded to tmp dir: " + inferTarballTmpDirFilePath);
 
-            Path userHomeDownloadsPath = Path.of(System.getProperty("user.home"), "Downloads");
-            Files.createDirectories(userHomeDownloadsPath);
+            Files.createDirectories(installDir);
 
-            untarInferTarball(inferTarballTmpDirFilePath, userHomeDownloadsPath);
+            untarInferTarball(inferTarballTmpDirFilePath, installDir);
 
-            Path inferExe = userHomeDownloadsPath
-                .resolve("infer-linux-x86_64-v1.2.0")
-                .resolve("bin")
-                .resolve("infer");
-            logger.info("Resolved Infer executable: " + inferExe);
+            if (!Files.exists(inferExe)) {
+                logger.error("An error occurred when extracting the Infer tarball. The Infer executable was not found in: " + inferExe);
+                throw new MojoExecutionException("Error occurred when extracting Infer tarball. Infer executable not found.");
+            }
+
+            logger.info("Resolved Infer executable after successfully downloading and extracting: " + inferExe);
 
             cleanupInferTarballTmpDir(inferDownloadTmpDir);
 
@@ -105,18 +114,18 @@ public class InferInstaller {
             }
 
             if (e instanceof MojoFailureException) {
-                logger.warn("Failure occurred when attempting to install Infer. Continuing in potentially unstable state.", e);
+                logger.warn("Failure occurred when attempting to install Infer. Continuing in potentially unstable state due to corrupted installation.", e);
                 throw new MojoFailureException("Failure occurred when attempting to install Infer", e);
             }
 
-            logger.error("Unable to get Infer from URL:" + url + "! Cannot continue Infer analysis.", e);
+            logger.error("An error occurred when attempting to download or install Infer. Cannot continue Infer analysis.", e);
             throw new MojoExecutionException(GENERIC_INFER_INSTALLATION_ERROR, e);
         }
     }
 
     private void untarInferTarball(Path inferTarballTmpDirFilePath, Path userHomeDownloadsPath)
         throws MojoExecutionException, MojoFailureException, IOException {
-        logger.info("Extracting " + inferTarballTmpDirFilePath + " to " + userHomeDownloadsPath);
+        logger.debug("Extracting " + inferTarballTmpDirFilePath + " to " + userHomeDownloadsPath);
 
         try (var fileInputStream = new FileInputStream(inferTarballTmpDirFilePath.toFile());
             var bufferedInputStream = new BufferedInputStream(fileInputStream);
@@ -207,7 +216,7 @@ public class InferInstaller {
     private void cleanupInferTarballTmpDir(Path tmpDir) throws MojoFailureException {
         try {
             FileUtils.deleteDirectory(tmpDir.toFile());
-            logger.info("Successfully cleaned up tmp dir used to download Infer: " + tmpDir);
+            logger.debug("Successfully cleaned up tmp dir used to download Infer: " + tmpDir);
         } catch (IOException e) {
             logger.warn("Failure occurred during cleanup of tmp dir used to download Infer. The tmp dir will need to be cleaned up manually: " + tmpDir, e);
             throw new MojoFailureException("Failed to cleanup tmp dir used to download Infer: " + tmpDir, e);

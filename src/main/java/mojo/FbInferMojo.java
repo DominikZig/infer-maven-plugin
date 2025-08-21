@@ -2,6 +2,7 @@ package mojo;
 
 import core.InferInstaller;
 import core.InferRunner;
+import java.io.File;
 import java.nio.file.Path;
 import javax.inject.Inject;
 import org.apache.maven.plugin.AbstractMojo;
@@ -32,9 +33,12 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(property = "resultsDir", defaultValue = "${project.build.directory}/infer-out")
     private String resultsDir;
 
+    @Parameter(property = "installDir", defaultValue = "${user.home}/Downloads")
+    private File installDir;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        Path inferExe = installer.tryInstallInfer();
+        Path inferExe = installer.tryInstallInfer(installDir.toPath());
 
         runner.setProject(project);
         runner.setFailOnIssue(failOnIssue);

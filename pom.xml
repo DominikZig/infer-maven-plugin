@@ -121,9 +121,6 @@
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
-          <!--
-           ! currently needed to run integration tests.
-          -->
           <systemPropertyVariables>
             <maven.version>${maven.version}</maven.version>
             <maven.home>${maven.home}</maven.home>

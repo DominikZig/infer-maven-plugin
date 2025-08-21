@@ -28,7 +28,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Flow;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,17 +67,9 @@ class InferInstallerTest {
 
     private InferInstaller installer;
 
-    private String originalUserHome;
-
     @BeforeEach
     void setUp() {
         installer = new InferInstaller(logger, httpClientFactory);
-        originalUserHome = System.getProperty("user.home");
-    }
-
-    @AfterEach
-    void tearDown() {
-        System.setProperty("user.home", originalUserHome);
     }
 
     @DisplayName("""
@@ -100,7 +91,7 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        Path inferExe = installer.tryInstallInfer();
+        Path inferExe = installer.tryInstallInfer(dummyHome.resolve("Downloads"));
 
         Path expectedInferPath = dummyHome.resolve("Downloads")
             .resolve(rootDir)
@@ -111,6 +102,32 @@ class InferInstallerTest {
         assertThat(Files.exists(inferExe)).isTrue();
         assertThat(Files.exists(expectedInferPath)).isTrue();
         assertTmpDirCleanup();
+    }
+
+    @DisplayName("""
+        Given Infer exe already exists\s
+        When plugin tries to install Infer\s
+        Then returns existing Infer exe location\s
+       """)
+    @Test
+    void tryInstallInferAlreadyExists(@TempDir Path dummyHome) throws Exception {
+        System.setProperty("user.home", dummyHome.toString());
+
+        Path existingInferExePath = dummyHome.resolve("Downloads")
+            .resolve("infer-linux-x86_64-v1.2.0")
+            .resolve("bin")
+            .resolve("infer");
+
+        Files.createDirectories(existingInferExePath.getParent());
+        Files.createFile(existingInferExePath);
+
+        Path inferExe = installer.tryInstallInfer(dummyHome.resolve("Downloads"));
+
+        assertThat(inferExe).isEqualTo(existingInferExePath);
+        assertThat(Files.exists(inferExe)).isTrue();
+        assertThat(Files.exists(existingInferExePath)).isTrue();
+
+        verify(logger).info("Infer executable already exists in: " + existingInferExePath + ". Using this for Infer analysis.");
     }
 
     @DisplayName("""
@@ -129,7 +146,7 @@ class InferInstallerTest {
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(badHttpResponse);
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, installer::tryInstallInfer);
+        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> installer.tryInstallInfer(dummyHome));
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error occurred when attempting to install Infer");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
         assertThat(mojoExecutionException)
@@ -162,7 +179,7 @@ class InferInstallerTest {
 
         assertThat(Thread.currentThread().isInterrupted()).isFalse();
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, installer::tryInstallInfer);
+        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> installer.tryInstallInfer(dummyHome));
 
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error occurred when attempting to install Infer");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(InterruptedException.class);
@@ -177,7 +194,7 @@ class InferInstallerTest {
         verify(logger, times(1)).error(errorLogCaptor.capture(), errorExCaptor.capture());
 
         assertThat(errorLogCaptor.getAllValues())
-            .containsExactly("Unable to get Infer from URL:https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz! Cannot continue Infer analysis.");
+            .containsExactly("An error occurred when attempting to download or install Infer. Cannot continue Infer analysis.");
         assertTmpDirCleanup();
     }
 
@@ -198,7 +215,7 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, installer::tryInstallInfer);
+        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> installer.tryInstallInfer(dummyHome));
 
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error occurred when attempting to install Infer");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
@@ -215,7 +232,7 @@ class InferInstallerTest {
         List<String> expectedErrorLogs = List.of(
             "Error occurred when untarring the Infer tarball due to potential ZipSlip detected.",
             "An error occurred when untarring the Infer tarball.",
-            "Unable to get Infer from URL:https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz! Cannot continue Infer analysis.");
+            "An error occurred when attempting to download or install Infer. Cannot continue Infer analysis.");
         assertThat(errorLogCaptor.getAllValues()).containsExactlyElementsIn(expectedErrorLogs);
         assertTmpDirCleanup();
     }
@@ -224,7 +241,7 @@ class InferInstallerTest {
          Given file is available to download\s
          And directory structure correctly setup\s
          When plugin tries to install Infer\s
-         Then successfully installs, downloads and extracts Infer\s 
+         Then successfully installs, downloads and extracts Infer\s
          WITHOUT Exec Permissions and then\s
          And successfully cleans up tmp dirs
        """)
@@ -238,7 +255,7 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        Path inferExe = installer.tryInstallInfer();
+        Path inferExe = installer.tryInstallInfer(dummyHome.resolve("Downloads"));
         // no exception => no POSIX permission changes attempted (file mode didn't set exec bits)
 
         Path expectedInferPath = dummyHome.resolve("Downloads")
@@ -259,7 +276,7 @@ class InferInstallerTest {
          Given file is available to download\s
          And directory structure is setup with a hardlink entry\s
          When plugin tries to install Infer\s
-         Then successfully installs, downloads and extracts Infer\s 
+         Then successfully installs, downloads and extracts Infer\s
          And successfully handles the hardlink entry\s
          And successfully cleans up tmp dirs
        """)
@@ -275,7 +292,7 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        Path inferExe = installer.tryInstallInfer();
+        Path inferExe = installer.tryInstallInfer(dummyHome.resolve("Downloads"));
 
         Path downloads = dummyHome.resolve("Downloads");
         Path hardLinkPath = downloads.resolve(rootDir).resolve("bin").resolve("hardlink.txt");
@@ -292,7 +309,7 @@ class InferInstallerTest {
          Given file is available to download\s
          And directory structure is setup with a hardlink entry which does not exist yet\s
          When plugin tries to install Infer\s
-         Then successfully installs, downloads and extracts Infer\s 
+         Then successfully installs, downloads and extracts Infer\s
          And successfully warns about the missing hardlink entry\s
          And successfully cleans up tmp dirs
        """)
@@ -309,7 +326,7 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        Path inferExe = installer.tryInstallInfer();
+        Path inferExe = installer.tryInstallInfer(dummyHome);
         assertThat(Files.exists(inferExe)).isTrue();
 
         // Verify specific warn on missing hard link target
@@ -335,7 +352,7 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        var mojoFailureException = assertThrows(MojoFailureException.class, installer::tryInstallInfer);
+        var mojoFailureException = assertThrows(MojoFailureException.class, () -> installer.tryInstallInfer(dummyHome));
 
         assertThat(mojoFailureException).hasMessageThat().isEqualTo("Failure occurred when attempting to install Infer");
         assertThat(mojoFailureException).hasCauseThat().hasMessageThat().isEqualTo("Failure occurred when untarring Infer tarball");
@@ -349,7 +366,7 @@ class InferInstallerTest {
         // Two warns with exception: from untar and outer tryInstallInfer
         verify(logger, times(2)).warn(warnLogCaptor.capture(), warnExCaptor.capture());
         assertThat(warnLogCaptor.getAllValues()).contains("A failure occurred when untarring the Infer tarball. This could be due to corruption in extracting the files.");
-        assertThat(warnLogCaptor.getAllValues()).contains("Failure occurred when attempting to install Infer. Continuing in potentially unstable state.");
+        assertThat(warnLogCaptor.getAllValues()).contains("Failure occurred when attempting to install Infer. Continuing in potentially unstable state due to corrupted installation.");
         assertTmpDirCleanup();
     }
 
@@ -388,7 +405,7 @@ class InferInstallerTest {
             files.when(() -> Files.createSymbolicLink(eq(expectedSymlinkTarget), eq(expectedLinkTarget)))
                 .thenAnswer(inv -> expectedSymlinkTarget);
 
-            Path inferExe = installer.tryInstallInfer();
+            Path inferExe = installer.tryInstallInfer(dummyHome.resolve("Downloads"));
 
             // Verify symlink creation was attempted with the expected paths
             files.verify(() -> Files.createSymbolicLink(eq(expectedSymlinkTarget), eq(expectedLinkTarget)));
@@ -410,12 +427,12 @@ class InferInstallerTest {
          Given file is available to download\s
          And directory structure correctly setup\s
          When plugin tries to install Infer\s
-         Then successfully installs, downloads and extracts Infer\s 
-         And successfully logs all info logs\s
+         Then successfully installs, downloads and extracts Infer\s
+         And successfully logs all info and debug logs\s
          And successfully cleans up tmp dirs
        """)
     @Test
-    void tryInstallInferLogsInfoMessages(@TempDir Path dummyHome) throws Exception {
+    void tryInstallInferLogsInfoAndDebugMessages(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
         String rootDir = "infer-linux-x86_64-v1.2.0";
         byte[] tarBytes = createTarXz("ok".getBytes(StandardCharsets.UTF_8), rootDir);
@@ -424,17 +441,21 @@ class InferInstallerTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytes));
 
-        Path inferExe = installer.tryInstallInfer();
+        Path inferExe = installer.tryInstallInfer(dummyHome);
         assertThat(Files.exists(inferExe)).isTrue();
 
         var infoLogCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger, atLeastOnce()).info(infoLogCaptor.capture());
         var infoLogMessages = infoLogCaptor.getAllValues();
         assertThat(infoLogMessages.stream().anyMatch(s -> s.equals("Attempting to download Infer"))).isTrue();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Downloading Infer from:"))).isTrue();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Successfully downloaded to tmp dir:"))).isTrue();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Extracting "))).isTrue();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Resolved Infer executable: "))).isTrue();
+        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Resolved Infer executable after successfully downloading and extracting: "))).isTrue();
+
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Downloading Infer from:"))).isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Successfully downloaded to tmp dir:"))).isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Extracting "))).isTrue();
         assertTmpDirCleanup();
     }
 
@@ -467,7 +488,7 @@ class InferInstallerTest {
                     throw new IOException("Something went wrong during cleanup");
                 });
 
-            var mojoFailureException = assertThrows(MojoFailureException.class, installer::tryInstallInfer);
+            var mojoFailureException = assertThrows(MojoFailureException.class, () -> installer.tryInstallInfer(dummyHome));
 
             assertThat(mojoFailureException.getMessage()).contains("Failed to cleanup tmp dir used to download Infer:");
             assertThat(mojoFailureException).hasCauseThat().isInstanceOf(IOException.class);
@@ -515,7 +536,7 @@ class InferInstallerTest {
         // Let Files static methods call real methods except for the two POSIX methods we verify
         try (MockedStatic<Files> filesMock = mockStatic(Files.class, CALLS_REAL_METHODS)) {
             // We don't stub getPosixFilePermissions/setPosixFilePermissions; we just want to verify they're not called
-            Path inferExe = installer.tryInstallInfer();
+            Path inferExe = installer.tryInstallInfer(dummyHome);
             assertThat(Files.exists(inferExe)).isTrue();
 
             // Verify POSIX permission APIs were NOT called
@@ -558,7 +579,7 @@ class InferInstallerTest {
 
             filesMock.when(() -> Files.getPosixFilePermissions(any(Path.class))).thenReturn(EnumSet.copyOf(baseline));
 
-            Path inferExe = installer.tryInstallInfer();
+            Path inferExe = installer.tryInstallInfer(dummyHome);
             assertThat(Files.exists(inferExe)).isTrue();
 
             // Verify getPosixFilePermissions was called for the extracted file
@@ -576,6 +597,41 @@ class InferInstallerTest {
             // Also ensure we didn't drop baseline read/write bits
             assertThat(finalPerms).containsAtLeastElementsIn(baseline);
         }
+
+        assertTmpDirCleanup();
+    }
+
+    @DisplayName("""
+         Given file is available to download\s
+         And extracted content does NOT contain infer-linux-x86_64-v1.2.0/bin/infer
+         When plugin tries to install Infer\s
+         Then throws MojoExecutionException
+       """)
+    @Test
+    void tryInstallInferMissingExecutable(@TempDir Path dummyHome) throws Exception {
+        System.setProperty("user.home", dummyHome.toString());
+
+        byte[] tarBytesWithoutInferExe = createTarXz("missing-infer".getBytes(StandardCharsets.UTF_8), "some-non-infer-root-dir");
+
+        when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenAnswer(inv -> successfulInferUrlHttpResponse(inv, tarBytesWithoutInferExe));
+
+        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> installer.tryInstallInfer(dummyHome.resolve("Downloads")));
+
+        assertThat(mojoExecutionException.getMessage()).isEqualTo("Error occurred when attempting to install Infer");
+        assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
+        assertThat(mojoExecutionException)
+            .hasCauseThat()
+            .hasMessageThat()
+            .isEqualTo("Error occurred when extracting Infer tarball. Infer executable not found.");
+
+        var errorLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).error(errorLogCaptor.capture());
+
+        assertThat(errorLogCaptor.getAllValues().stream()
+            .anyMatch(s -> s.contains("An error occurred when extracting the Infer tarball. The Infer executable was not found in: "
+                + dummyHome.resolve("Downloads") + "/infer-linux-x86_64-v1.2.0/bin/infer"))).isTrue();
 
         assertTmpDirCleanup();
     }
@@ -767,16 +823,16 @@ class InferInstallerTest {
 
     private void assertTmpDirCleanup() {
         // Verify cleanup occurred by inspecting info logs and checking the directory was deleted
-        var infoLogCaptor = ArgumentCaptor.forClass(String.class);
-        verify(logger, atLeastOnce()).info(infoLogCaptor.capture());
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
         String cleanedMsgPrefix = "Successfully cleaned up tmp dir used to download Infer: ";
 
-        assertThat(infoLogCaptor.getAllValues().stream()
+        assertThat(debugLogCaptor.getAllValues().stream()
             .anyMatch(s -> s.startsWith(cleanedMsgPrefix)))
             .isTrue();
 
         // Ensure every cleaned tmp dir mentioned in logs was actually removed
-        assertThat(infoLogCaptor.getAllValues().stream()
+        assertThat(debugLogCaptor.getAllValues().stream()
             .filter(s -> s.startsWith(cleanedMsgPrefix))
             .map(s -> s.substring(cleanedMsgPrefix.length()).trim())
             .map(Path::of)

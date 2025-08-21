@@ -103,12 +103,12 @@ class InferRunnerTest {
 
         verify(logger).info("infer: ok");
         verify(logger).info("Infer analysis completed. Results in: " + resultsDir);
-        var infoLogCaptor = ArgumentCaptor.forClass(String.class);
-        verify(logger, atLeastOnce()).info(infoLogCaptor.capture());
-        var infoLogMessages = infoLogCaptor.getAllValues();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.startsWith("Running: "))).isTrue();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.contains("-classpath"))).isTrue();
-        assertThat(infoLogMessages.stream().anyMatch(s -> s.contains("-g"))).isTrue();
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Running: "))).isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-classpath"))).isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-g"))).isTrue();
     }
 
     @DisplayName("""
@@ -201,7 +201,7 @@ class InferRunnerTest {
         And infer process with exit code 2
         And with failOnIssue true\s
         When running Infer\s
-        Then throws MojoExecutionException\s
+        Then throws MojoFailureException\s
        """)
     @Test
     void runInferOnProjectInferExitCode2FailOnIssueTrue(@TempDir Path tmp) throws Exception {
@@ -227,10 +227,10 @@ class InferRunnerTest {
 
         Path dummyInferExecutableWithExitCode2 = createDummyInferExecutable(tmp, 2, "infer: issues");
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutableWithExitCode2));
+        var mojoExecutionException = assertThrows(MojoFailureException.class, () -> runner.runInferOnProject(dummyInferExecutableWithExitCode2));
 
-        assertThat(mojoExecutionException.getMessage()).contains("Error running Infer on project");
-        assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
+        assertThat(mojoExecutionException.getMessage()).contains("Infer analysis completed with issues");
+        assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoFailureException.class);
         assertThat(mojoExecutionException).hasCauseThat().hasMessageThat()
             .startsWith("Infer analysis completed with issues found. Results in:");
 
@@ -238,13 +238,10 @@ class InferRunnerTest {
         assertThat(Files.exists(resultsDir)).isTrue();
         assertThat(Files.exists(targetDir.resolve("java-sources.args"))).isTrue();
 
-        var errorLogCaptor = ArgumentCaptor.forClass(String.class);
-        var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
-        verify(logger).error(errorLogCaptor.capture());
-        verify(logger, times(1)).error(errorLogCaptor.capture(), errorExCaptor.capture());
-        var errorLogMessages = errorLogCaptor.getAllValues();
-        assertThat(errorLogMessages.stream().anyMatch(s -> s.equals("Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info."))).isTrue();
-        assertThat(errorLogMessages.stream().anyMatch(s -> s.startsWith("An error occurred when running Infer on the project."))).isTrue();
+        var warnLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, times(1)).warn(warnLogCaptor.capture());
+        var warnLogMessage = warnLogCaptor.getValue();
+        assertThat(warnLogMessage).contains("Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.");
     }
 
     @DisplayName("""
@@ -496,7 +493,7 @@ class InferRunnerTest {
 
         // Assert: command line includes the @argfile path (would be "@null" if createJavacArgfile returned null)
         Path argfile = targetDir.resolve("java-sources.args");
-        verify(logger, atLeastOnce()).info(argThat(s -> s.startsWith("Running: ") && s.contains("@" + argfile)));
+        verify(logger, atLeastOnce()).debug(argThat(s -> s.startsWith("Running: ") && s.contains("@" + argfile)));
 
         // Argfile exists and contains our single source path
         assertThat(Files.exists(argfile)).isTrue();
