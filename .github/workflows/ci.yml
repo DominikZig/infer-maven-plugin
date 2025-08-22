@@ -27,7 +27,7 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Build
-        run: mvn -B -DskipTests=true -DskipITs package
+        run: mvn -B -Dskip.ut=true -DskipITs package
 
   unit-tests:
     name: Unit Tests
