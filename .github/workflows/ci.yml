@@ -43,7 +43,7 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Run unit tests
-        run: mvn -B -DskipITs verify
+        run: mvn -B test
       - name: Archive unit test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -67,7 +67,7 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Run integration tests
-        run: mvn -B -DskipTests verify
+        run: mvn -B -Dskip.ut=true verify
       - name: Archive integration test reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -101,6 +101,7 @@
         <version>3.5.3</version>
         <configuration>
           <useModulePath>false</useModulePath>
+            <skipTests>${skip.ut}</skipTests>
         </configuration>
       </plugin>
       <plugin>
