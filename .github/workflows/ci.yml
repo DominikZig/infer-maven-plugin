@@ -89,5 +89,5 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: Integration Tests
-          path: target/failsafe-reports/*.xml
+          path: target/failsafe-reports/TEST-*.xml
           reporter: java-junit
