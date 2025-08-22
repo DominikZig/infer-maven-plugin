@@ -107,8 +107,6 @@ jobs:
       - uses: dorny/test-reporter@v2.1.1
         with:
           artifact: surefire-reports
-          name: Unit and Integration Tests
-          path: |
-            surefire-reports/*.xml
-            failsafe-reports/TEST-*.xml
+          name: Unit Tests
+          path: '*.xml'
           reporter: java-junit
