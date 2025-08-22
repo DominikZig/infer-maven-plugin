@@ -89,21 +89,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Download unit test reports
-        uses: actions/download-artifact@v4
-        with:
-          name: surefire-reports
-      - name: Download integration test reports
-        uses: actions/download-artifact@v4
-        with:
-          name: failsafe-reports
-      - name: List downloaded reports #debug
-        if: always()
-        run: |
-          echo "UNIT:"
-          ls -Rlah surefire-reports || true
-          echo "IT:"
-          ls -Rlah failsafe-reports || true
       - uses: dorny/test-reporter@v2.1.1
         with:
           artifact: surefire-reports
