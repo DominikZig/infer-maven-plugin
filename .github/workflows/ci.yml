@@ -99,6 +99,6 @@ jobs:
         with:
           name: Unit and Integration Tests
           path: |
-            target/surefire-reports/*.xml
-            target/failsafe-reports/TEST-*.xml
+            surefire-reports/*.xml
+            failsafe-reports/TEST-*.xml
           reporter: java-junit
