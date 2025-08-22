@@ -52,6 +52,13 @@ jobs:
           path: |
             target/surefire-reports/**
             target/test-classes/**
+      - name: Display unit test results
+        uses: dorny/test-reporter@v2.1.1
+        if: ${{ !cancelled() }}
+        with:
+          name: Unit Tests
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
 
   integration-tests:
     name: Integration Tests
@@ -77,3 +84,10 @@ jobs:
             target/failsafe-reports/**
             target/maven-it/**
             target/itf-repo/**
+      - name: Display integration test results
+        uses: dorny/test-reporter@v2.1.1
+        if: ${{ !cancelled() }}
+        with:
+          name: Integration Tests
+          path: target/failsafe-reports/*.xml
+          reporter: java-junit
