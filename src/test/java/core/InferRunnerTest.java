@@ -1,35 +1,5 @@
 package core;
 
-import Utils.DummyJavaProject;
-import java.io.ByteArrayInputStream;
-import java.nio.file.attribute.PosixFilePermission;
-import java.util.Collections;
-import java.util.Set;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.logging.Logger;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockedConstruction;
-import org.mockito.MockedStatic;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.maven.model.Build;
-
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,6 +17,34 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import Utils.DummyJavaProject;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.model.Build;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.logging.Logger;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 @ExtendWith(MockitoExtension.class)
 class InferRunnerTest {
 
@@ -63,7 +61,8 @@ class InferRunnerTest {
         runner = new InferRunner(logger);
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given a valid Java source\s
         And and process exits with normal termination flag of 0\s
         When running Infer\s
@@ -81,8 +80,11 @@ class InferRunnerTest {
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
         // Non-empty classpath to assert -classpath is added
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
-        when(project.getCompileClasspathElements()).thenReturn(List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(true); // expect -g in args since testing 'full' flow
@@ -98,7 +100,8 @@ class InferRunnerTest {
         assertThat(Files.exists(resultsDir)).isTrue();
         Path argfile = targetDir.resolve("java-sources.args");
         assertThat(Files.exists(argfile)).isTrue();
-        assertThat(Files.readAllLines(argfile)).containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
         assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
 
         verify(logger).info("infer: ok");
@@ -106,12 +109,15 @@ class InferRunnerTest {
         var debugLogCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
         var debugLogMessages = debugLogCaptor.getAllValues();
-        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Running: "))).isTrue();
-        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-classpath"))).isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Running: ")))
+                .isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-classpath")))
+                .isTrue();
         assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-g"))).isTrue();
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given no Java sources\s
         When running Infer\s
         Then throws MojoFailureException and logs info\s
@@ -130,11 +136,15 @@ class InferRunnerTest {
         runner.setResultsDir(resultsDir.toString());
         runner.setFailOnIssue(true);
 
-        var mojoFailureException = assertThrows(MojoFailureException.class, () -> runner.runInferOnProject(Path.of("infer")));
+        var mojoFailureException =
+                assertThrows(MojoFailureException.class, () -> runner.runInferOnProject(Path.of("infer")));
 
         assertThat(mojoFailureException.getMessage()).isEqualTo("Failure running Infer on project");
         assertThat(mojoFailureException).hasCauseThat().isInstanceOf(MojoFailureException.class);
-        assertThat(mojoFailureException).hasCauseThat().hasMessageThat().isEqualTo("No Java sources found; skipping Infer analysis.");
+        assertThat(mojoFailureException)
+                .hasCauseThat()
+                .hasMessageThat()
+                .isEqualTo("No Java sources found; skipping Infer analysis.");
         verify(logger, times(1)).warn("No Java sources found in []. Skipping Infer analysis.");
         assertThat(Files.exists(resultsDir)).isFalse(); // Ensure results dir not created because early exit
 
@@ -145,7 +155,8 @@ class InferRunnerTest {
         assertThat(warnLogMessage).contains("A failure occurred when running Infer on the project.");
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given a valid Java sources\s
         And missing infer executable\s
         When running Infer\s
@@ -163,7 +174,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -176,7 +188,8 @@ class InferRunnerTest {
         // Use a non-existent infer executable inside temp so ProcessBuilder.start throws IOException
         Path missingInfer = dummyJavaProject.projectRoot().resolve("bin").resolve("infer-does-not-exist");
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(missingInfer));
+        var mojoExecutionException =
+                assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(missingInfer));
 
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error running Infer on project");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(IOException.class);
@@ -187,7 +200,8 @@ class InferRunnerTest {
         assertThat(Files.exists(argfile)).isTrue(); // argfile should exist with our Hello.java path inside
         List<String> lines = Files.readAllLines(argfile);
         assertThat(lines).containsExactly(dummyJavaProject.helloJava().toString());
-        assertThat(Files.exists(targetDir.resolve("classes"))).isTrue(); // javacArgBuilder should have created the classes directory
+        assertThat(Files.exists(targetDir.resolve("classes")))
+                .isTrue(); // javacArgBuilder should have created the classes directory
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
         var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
@@ -196,7 +210,8 @@ class InferRunnerTest {
         assertThat(errorLogMessage).contains("An error occurred when running Infer on the project.");
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given a valid Java sources\s
         And infer process with exit code 2
         And with failOnIssue true\s
@@ -214,7 +229,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -227,12 +243,15 @@ class InferRunnerTest {
 
         Path dummyInferExecutableWithExitCode2 = createDummyInferExecutable(tmp, 2, "infer: issues");
 
-        var mojoExecutionException = assertThrows(MojoFailureException.class, () -> runner.runInferOnProject(dummyInferExecutableWithExitCode2));
+        var mojoExecutionException = assertThrows(
+                MojoFailureException.class, () -> runner.runInferOnProject(dummyInferExecutableWithExitCode2));
 
         assertThat(mojoExecutionException.getMessage()).contains("Infer analysis completed with issues");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoFailureException.class);
-        assertThat(mojoExecutionException).hasCauseThat().hasMessageThat()
-            .startsWith("Infer analysis completed with issues found. Results in:");
+        assertThat(mojoExecutionException)
+                .hasCauseThat()
+                .hasMessageThat()
+                .startsWith("Infer analysis completed with issues found. Results in:");
 
         // Ensure results and argfile exist
         assertThat(Files.exists(resultsDir)).isTrue();
@@ -241,10 +260,13 @@ class InferRunnerTest {
         var warnLogCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger, times(1)).warn(warnLogCaptor.capture());
         var warnLogMessage = warnLogCaptor.getValue();
-        assertThat(warnLogMessage).contains("Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.");
+        assertThat(warnLogMessage)
+                .contains(
+                        "Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.");
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given a valid Java sources\s
         And infer process with exit code 2
         And with failOnIssue false\s
@@ -262,7 +284,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -281,11 +304,13 @@ class InferRunnerTest {
         assertThat(Files.exists(resultsDir)).isTrue();
         Path argfile = targetDir.resolve("java-sources.args");
         assertThat(Files.exists(argfile)).isTrue();
-        assertThat(Files.readAllLines(argfile)).containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
         assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given a valid Java sources\s
         And infer process with unexpected exit code\s
         When running Infer\s
@@ -302,7 +327,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(new ArrayList<>());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -315,11 +341,15 @@ class InferRunnerTest {
 
         Path dummyInferExecutableWithExitCode3 = createDummyInferExecutable(tmp, 3, "infer: unexpected");
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutableWithExitCode3));
+        var mojoExecutionException = assertThrows(
+                MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutableWithExitCode3));
 
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error running Infer on project");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
-        assertThat(mojoExecutionException).hasCauseThat().hasMessageThat().contains("Infer analysis errored with unexpected exit code 3");
+        assertThat(mojoExecutionException)
+                .hasCauseThat()
+                .hasMessageThat()
+                .contains("Infer analysis errored with unexpected exit code 3");
 
         // Ensure results and argfile exist
         assertThat(Files.exists(resultsDir)).isTrue();
@@ -327,13 +357,16 @@ class InferRunnerTest {
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
         var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
-        verify(logger).error("An error occurred during Infer due to unexpected exit code returned by the process running Infer. See stacktrace for more info.");
+        verify(logger)
+                .error(
+                        "An error occurred during Infer due to unexpected exit code returned by the process running Infer. See stacktrace for more info.");
         verify(logger, atLeastOnce()).error(errorLogCaptor.capture(), errorExCaptor.capture());
         var errorLogMessage = errorLogCaptor.getValue();
         assertThat(errorLogMessage).contains("An error occurred when running Infer on the project.");
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given Java sources with invalid source root\s
         And causing IOException during discovery\s
         When running Infer\s
@@ -355,9 +388,12 @@ class InferRunnerTest {
         // Mock Files.isDirectory and Files.find to throw IOException on discovery
         try (MockedStatic<Files> filesMock = mockStatic(Files.class, CALLS_REAL_METHODS)) {
             filesMock.when(() -> Files.isDirectory(srcMainJava)).thenReturn(true);
-            filesMock.when(() -> Files.find(eq(srcMainJava), eq(Integer.MAX_VALUE), any())).thenThrow(new IOException("disk error"));
+            filesMock
+                    .when(() -> Files.find(eq(srcMainJava), eq(Integer.MAX_VALUE), any()))
+                    .thenThrow(new IOException("disk error"));
 
-            var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(Path.of("infer")));
+            var mojoExecutionException =
+                    assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(Path.of("infer")));
 
             assertThat(mojoExecutionException.getMessage()).isEqualTo("Error running Infer on project");
             assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
@@ -374,7 +410,8 @@ class InferRunnerTest {
         }
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given discovered Java sources\s
         but classpath resolution fails\s
         When running Infer\s
@@ -388,22 +425,34 @@ class InferRunnerTest {
         // Build and basedir (won't be used because we fail before exec)
         Build build = new Build();
         build.setDirectory(dummyJavaProject.projectRoot().resolve("target").toString());
-        build.setOutputDirectory(dummyJavaProject.projectRoot().resolve("target").resolve("classes").toString());
+        build.setOutputDirectory(dummyJavaProject
+                .projectRoot()
+                .resolve("target")
+                .resolve("classes")
+                .toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
 
         // Trigger DependencyResolutionRequiredException when building classpath
         when(project.getCompileClasspathElements()).thenThrow(new DependencyResolutionRequiredException(null));
 
         runner.setProject(project);
-        runner.setResultsDir(dummyJavaProject.projectRoot().resolve("infer-results").toString());
+        runner.setResultsDir(
+                dummyJavaProject.projectRoot().resolve("infer-results").toString());
         runner.setFailOnIssue(false);
 
-        var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(Path.of("infer")));
+        var mojoExecutionException =
+                assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(Path.of("infer")));
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error running Infer on project");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
-        assertThat(mojoExecutionException).hasCauseThat().hasMessageThat().isEqualTo("Compile classpath could not be resolved");
-        assertThat(mojoExecutionException.getCause()).hasCauseThat().isInstanceOf(DependencyResolutionRequiredException.class);
+        assertThat(mojoExecutionException)
+                .hasCauseThat()
+                .hasMessageThat()
+                .isEqualTo("Compile classpath could not be resolved");
+        assertThat(mojoExecutionException.getCause())
+                .hasCauseThat()
+                .isInstanceOf(DependencyResolutionRequiredException.class);
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
         var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
@@ -413,7 +462,8 @@ class InferRunnerTest {
         assertThat(errorLogMessage).contains("An error occurred when running Infer on the project.");
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
         Given valid Java sources with multiple Java files\s
         When running Infer\s
         Then Argfile contains one path per line so multiple sources produce multiple lines\s
@@ -460,7 +510,8 @@ class InferRunnerTest {
         assertThat(lines).containsExactlyElementsIn(List.of(aJava.toString(), bJava.toString()));
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
          Given a valid Java source\s
          And Infer command includes @argfile path
          When running Infer\s
@@ -477,7 +528,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -497,10 +549,12 @@ class InferRunnerTest {
 
         // Argfile exists and contains our single source path
         assertThat(Files.exists(argfile)).isTrue();
-        assertThat(Files.readAllLines(argfile)).containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
          Given a valid Java source\s
          And Infer process does not finish within timeout\s
          When running Infer\s
@@ -517,7 +571,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -528,7 +583,8 @@ class InferRunnerTest {
         runner.setFailOnIssue(false);
 
         // Dummy infer path (won't actually run due to construction mocking)
-        Path dummyInferExecutable = dummyJavaProject.projectRoot().resolve("bin").resolve("infer");
+        Path dummyInferExecutable =
+                dummyJavaProject.projectRoot().resolve("bin").resolve("infer");
 
         // Mock Process so that waitFor(timeout) returns false (timeout)
         Process mockProcess = mock(Process.class);
@@ -541,25 +597,31 @@ class InferRunnerTest {
             when(builder.redirectErrorStream(true)).thenReturn(builder);
             when(builder.start()).thenReturn(mockProcess);
         })) {
-            var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutable));
+            var mojoExecutionException =
+                    assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutable));
 
             assertThat(mojoExecutionException.getMessage()).isEqualTo("Error running Infer on project");
             assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
-            assertThat(mojoExecutionException).hasCauseThat().hasMessageThat()
-                .isEqualTo("Infer analysis errored with timeout running command: " + dummyInferExecutable);
+            assertThat(mojoExecutionException)
+                    .hasCauseThat()
+                    .hasMessageThat()
+                    .isEqualTo("Infer analysis errored with timeout running command: " + dummyInferExecutable);
 
             verify(mockProcess, times(1)).destroyForcibly(); // Ensure process was destroyed forcibly on timeout
 
             var errorLogCaptor = ArgumentCaptor.forClass(String.class);
             var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
-            verify(logger).error("An error occurred during Infer due to timeout running command. See stacktrace for more info.");
+            verify(logger)
+                    .error(
+                            "An error occurred during Infer due to timeout running command. See stacktrace for more info.");
             verify(logger, atLeastOnce()).error(errorLogCaptor.capture(), errorExCaptor.capture());
             var errorLogMessage = errorLogCaptor.getValue();
             assertThat(errorLogMessage).contains("An error occurred when running Infer on the project.");
         }
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
          Given a valid Java source\s
          And Infer process wait is interrupted\s
          When running Infer\s
@@ -576,7 +638,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -587,7 +650,8 @@ class InferRunnerTest {
         runner.setFailOnIssue(false);
 
         // Dummy infer path (won't actually run due to construction mocking)
-        Path dummyInferExecutable = dummyJavaProject.projectRoot().resolve("bin").resolve("infer");
+        Path dummyInferExecutable =
+                dummyJavaProject.projectRoot().resolve("bin").resolve("infer");
 
         // Mock Process to throw InterruptedException from waitFor
         Process mockProcess = mock(Process.class);
@@ -599,12 +663,15 @@ class InferRunnerTest {
             when(builder.redirectErrorStream(true)).thenReturn(builder);
             when(builder.start()).thenReturn(mockProcess);
         })) {
-            var mojoExecutionException = assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutable));
+            var mojoExecutionException =
+                    assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(dummyInferExecutable));
 
             assertThat(mojoExecutionException.getMessage()).isEqualTo("Error running Infer on project");
             assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
-            assertThat(mojoExecutionException).hasCauseThat().hasMessageThat()
-                .isEqualTo("Infer analysis errored with interrupted running command: " + dummyInferExecutable);
+            assertThat(mojoExecutionException)
+                    .hasCauseThat()
+                    .hasMessageThat()
+                    .isEqualTo("Infer analysis errored with interrupted running command: " + dummyInferExecutable);
             assertThat(mojoExecutionException.getCause().getCause()).isInstanceOf(InterruptedException.class);
 
             assertThat(Thread.currentThread().isInterrupted()).isTrue(); // The thread should have been re-interrupted
@@ -612,14 +679,17 @@ class InferRunnerTest {
 
             var errorLogCaptor = ArgumentCaptor.forClass(String.class);
             var errorExCaptor = ArgumentCaptor.forClass(Throwable.class);
-            verify(logger).error("An error occurred during Infer due to an interruption in the thread running command. See stacktrace for more info.");
+            verify(logger)
+                    .error(
+                            "An error occurred during Infer due to an interruption in the thread running command. See stacktrace for more info.");
             verify(logger, atLeastOnce()).error(errorLogCaptor.capture(), errorExCaptor.capture());
             var errorLogMessage = errorLogCaptor.getValue();
             assertThat(errorLogMessage).contains("An error occurred when running Infer on the project.");
         }
     }
 
-    @DisplayName("""
+    @DisplayName(
+            """
          Given a valid Java source\s
          And process output containing non-empty, empty, and whitespace-only lines\s
          When running Infer\s
@@ -636,7 +706,8 @@ class InferRunnerTest {
         build.setDirectory(targetDir.toString());
         build.setOutputDirectory(targetDir.resolve("classes").toString());
 
-        when(project.getCompileSourceRoots()).thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
         when(project.getCompileClasspathElements()).thenReturn(Collections.emptyList());
         when(project.getBuild()).thenReturn(build);
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
@@ -647,12 +718,14 @@ class InferRunnerTest {
         runner.setFailOnIssue(false);
 
         // Dummy infer path (won't actually run due to construction mocking)
-        Path dummyInferExecutable = dummyJavaProject.projectRoot().resolve("bin").resolve("infer");
+        Path dummyInferExecutable =
+                dummyJavaProject.projectRoot().resolve("bin").resolve("infer");
 
         // Mocked process output containing non-empty, empty, and whitespace-only lines
         String processOut = "alpha\n\n   \n\t \n beta \n\ngamma\n";
         Process mockProcess = mock(Process.class);
-        when(mockProcess.getInputStream()).thenReturn(new ByteArrayInputStream(processOut.getBytes(StandardCharsets.UTF_8)));
+        when(mockProcess.getInputStream())
+                .thenReturn(new ByteArrayInputStream(processOut.getBytes(StandardCharsets.UTF_8)));
         when(mockProcess.waitFor(anyLong(), any())).thenReturn(true);
         when(mockProcess.exitValue()).thenReturn(0);
 
@@ -665,7 +738,8 @@ class InferRunnerTest {
 
             // non-blank lines logged, blank/whitespace-only lines are NOT logged
             verify(logger, atLeastOnce()).info("alpha");
-            verify(logger, atLeastOnce()).info(" beta"); // note: stripTrailing only removes trailing spaces, so leading spaces remain
+            verify(logger, atLeastOnce())
+                    .info(" beta"); // note: stripTrailing only removes trailing spaces, so leading spaces remain
             verify(logger, atLeastOnce()).info("gamma");
 
             // Ensure no blank string was logged (after stripTrailing + isBlank filter)
@@ -677,7 +751,9 @@ class InferRunnerTest {
     void runInferOnProjectNullMavenProject() {
         runner.setProject(null);
         var nullPointerException = assertThrows(NullPointerException.class, () -> runner.runInferOnProject(null));
-        assertThat(nullPointerException).hasMessageThat().isEqualTo("Maven project information required to proceed with Infer analysis");
+        assertThat(nullPointerException)
+                .hasMessageThat()
+                .isEqualTo("Maven project information required to proceed with Infer analysis");
     }
 
     @Test
@@ -685,7 +761,9 @@ class InferRunnerTest {
         runner.setProject(project);
         runner.setResultsDir(null);
         var nullPointerException = assertThrows(NullPointerException.class, () -> runner.runInferOnProject(null));
-        assertThat(nullPointerException).hasMessageThat().isEqualTo("Directory to store results required to proceed with Infer analysis");
+        assertThat(nullPointerException)
+                .hasMessageThat()
+                .isEqualTo("Directory to store results required to proceed with Infer analysis");
     }
 
     private DummyJavaProject createDummyJavaProject(Path tmp) throws IOException {
@@ -704,16 +782,14 @@ class InferRunnerTest {
         Path inferExe = binDir.resolve("infer.sh");
 
         // POSIX shell script
-        String content = "#!/usr/bin/env sh\n" +
-            "echo \"" + echoLine.replace("\"", "\\\"") + "\"\n" +
-            "exit " + exitCode + "\n";
+        String content =
+                "#!/usr/bin/env sh\n" + "echo \"" + echoLine.replace("\"", "\\\"") + "\"\n" + "exit " + exitCode + "\n";
         Files.writeString(inferExe, content, StandardCharsets.UTF_8);
         var perms = Files.getPosixFilePermissions(inferExe);
         perms.addAll(Set.of(
-            PosixFilePermission.OWNER_EXECUTE,
-            PosixFilePermission.GROUP_EXECUTE,
-            PosixFilePermission.OTHERS_EXECUTE
-        ));
+                PosixFilePermission.OWNER_EXECUTE,
+                PosixFilePermission.GROUP_EXECUTE,
+                PosixFilePermission.OTHERS_EXECUTE));
         Files.setPosixFilePermissions(inferExe, perms);
 
         return inferExe;
