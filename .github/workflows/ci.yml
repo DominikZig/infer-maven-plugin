@@ -7,10 +7,7 @@ on:
   pull_request:
 
 permissions:
-  checks: write
-  pull-requests: write
   contents: read
-  actions: read
 
 concurrency:
   group: ci-${{ github.ref }}-${{ github.workflow }}
