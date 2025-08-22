@@ -77,3 +77,21 @@ jobs:
             target/failsafe-reports/**
             target/maven-it/**
             target/itf-repo/**
+
+  test-report:
+    name: Test Report
+    needs: [ unit-tests, integration-tests ]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/test-reporter@v2.1.1
+        with:
+          name: Unit and Integration Tests
+          path: |
+            target/surefire-reports/TEST-*.xml
+            target/failsafe-reports/TEST-*.xml
+          reporter: java-junit
