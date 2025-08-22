@@ -92,11 +92,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: surefire-reports
-          path: surefire
       - uses: actions/download-artifact@v4
         with:
           name: failsafe-reports
-          path: failsafe
       - uses: dorny/test-reporter@v2.1.1
         with:
           name: Unit and Integration Tests
