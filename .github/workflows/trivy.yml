@@ -12,13 +12,10 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  scan:
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-
-jobs:
-  scan:
     name: Trivy
     runs-on: ubuntu-latest
     steps:
