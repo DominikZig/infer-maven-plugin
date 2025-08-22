@@ -40,12 +40,6 @@ public class InferRunner {
 
     private final Logger logger;
 
-    private MavenProject project;
-
-    private boolean failOnIssue;
-
-    private String resultsDir;
-
     private static final String JAVA_FILE_EXTENSION = ".java";
 
     @Inject
@@ -53,7 +47,12 @@ public class InferRunner {
         this.logger = logger;
     }
 
-    public void runInferOnProject(Path inferExe) throws MojoExecutionException, MojoFailureException {
+    public void runInferOnProject(InferParams inferParams, Path inferExe)
+            throws MojoExecutionException, MojoFailureException {
+        final MavenProject project = inferParams.project();
+        final boolean failOnIssue = inferParams.failOnIssue();
+        final String resultsDir = inferParams.resultsDir();
+
         Objects.requireNonNull(project, "Maven project information required to proceed with Infer analysis");
         Objects.requireNonNull(resultsDir, "Directory to store results required to proceed with Infer analysis");
 
@@ -80,15 +79,16 @@ public class InferRunner {
                 throw new MojoFailureException("No Java sources found; skipping Infer analysis.");
             }
 
-            String compileClasspath = buildCompileClasspathFromProjectArtifacts();
+            String compileClasspath = buildCompileClasspathFromProjectArtifacts(project);
 
             Path resultsDirPath = Path.of(resultsDir);
             Files.createDirectories(resultsDirPath);
 
             // Prepare an @argfile for sources to avoid long command lines
-            Path argfileWithJavaSources = createJavacArgfile(javaSourceFiles);
+            Path argfileWithJavaSources = createJavacArgfile(project.getBuild().getDirectory(), javaSourceFiles);
 
-            List<String> javacArgs = javacArgBuilder(compileClasspath, argfileWithJavaSources);
+            List<String> javacArgs =
+                    javacArgBuilder(compileClasspath, project.getBuild().getOutputDirectory(), argfileWithJavaSources);
             List<String> inferArgs = inferArgBuilder(inferExe.toString(), resultsDirPath.toString(), javacArgs);
 
             int exitCode = executeInferCommands(inferArgs, project.getBasedir().toPath());
@@ -121,7 +121,7 @@ public class InferRunner {
         return path.getFileName().toString().endsWith(JAVA_FILE_EXTENSION);
     }
 
-    private String buildCompileClasspathFromProjectArtifacts() throws MojoExecutionException {
+    private String buildCompileClasspathFromProjectArtifacts(MavenProject project) throws MojoExecutionException {
         try {
             List<String> compileClasspathElements = project.getCompileClasspathElements();
             return String.join(File.pathSeparator, compileClasspathElements);
@@ -131,8 +131,8 @@ public class InferRunner {
         }
     }
 
-    private Path createJavacArgfile(List<Path> javaSourceFiles) throws IOException {
-        Path buildDirPath = Path.of(project.getBuild().getDirectory());
+    private Path createJavacArgfile(String buildDir, List<Path> javaSourceFiles) throws IOException {
+        Path buildDirPath = Path.of(buildDir);
         Files.createDirectories(buildDirPath);
 
         Path argfileWithJavaSources = buildDirPath.resolve("java-sources" + ".args");
@@ -147,7 +147,8 @@ public class InferRunner {
         return argfileWithJavaSources;
     }
 
-    private List<String> javacArgBuilder(String compileClasspath, Path argfile) throws IOException {
+    private List<String> javacArgBuilder(String compileClasspath, String buildOutputDir, Path argfile)
+            throws IOException {
         List<String> javacArgs = new ArrayList<>();
         javacArgs.add(JAVAC_COMMAND);
 
@@ -161,7 +162,7 @@ public class InferRunner {
         }
 
         // Direct the class output to target/classes so types resolve consistently
-        Path classesDir = Path.of(project.getBuild().getOutputDirectory());
+        Path classesDir = Path.of(buildOutputDir);
         Files.createDirectories(classesDir);
         javacArgs.add(JAVAC_DEST_DIRECTORY_OPTION);
         javacArgs.add(classesDir.toString());
@@ -233,17 +234,5 @@ public class InferRunner {
                     .filter(line -> !line.isBlank())
                     .forEach(logger::info);
         }
-    }
-
-    public void setProject(MavenProject project) {
-        this.project = project;
-    }
-
-    public void setFailOnIssue(boolean failOnIssue) {
-        this.failOnIssue = failOnIssue;
-    }
-
-    public void setResultsDir(String resultsDir) {
-        this.resultsDir = resultsDir;
     }
 }

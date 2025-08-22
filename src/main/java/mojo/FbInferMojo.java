@@ -1,6 +1,7 @@
 package mojo;
 
 import core.InferInstaller;
+import core.InferParams;
 import core.InferRunner;
 import java.io.File;
 import java.nio.file.Path;
@@ -20,11 +21,9 @@ import org.apache.maven.project.MavenProject;
         requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class FbInferMojo extends AbstractMojo {
 
-    @Inject
-    private InferInstaller installer;
+    private final InferInstaller installer;
 
-    @Inject
-    private InferRunner runner;
+    private final InferRunner runner;
 
     @Parameter(defaultValue = "${project}", required = true, readonly = true)
     private MavenProject project;
@@ -38,13 +37,18 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(property = "installDir", defaultValue = "${user.home}/Downloads")
     private File installDir;
 
+    @Inject
+    public FbInferMojo(InferInstaller installer, InferRunner runner) {
+        this.installer = installer;
+        this.runner = runner;
+    }
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        Path inferExe = installer.tryInstallInfer(installDir.toPath());
+        InferParams inferParams = new InferParams(project, failOnIssue, resultsDir, installDir.toPath());
 
-        runner.setProject(project);
-        runner.setFailOnIssue(failOnIssue);
-        runner.setResultsDir(resultsDir);
-        runner.runInferOnProject(inferExe);
+        Path inferExe = installer.tryInstallInfer(inferParams.installDir());
+
+        runner.runInferOnProject(inferParams, inferExe);
     }
 }
