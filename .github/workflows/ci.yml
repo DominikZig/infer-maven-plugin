@@ -101,9 +101,9 @@ jobs:
         if: always()
         run: |
           echo "UNIT:"
-          ls -Rlah surefire || true
+          ls -Rlah surefire-reports || true
           echo "IT:"
-          ls -Rlah failsafe || true
+          ls -Rlah failsafe-reports || true
       - uses: dorny/test-reporter@v2.1.1
         with:
           name: Unit and Integration Tests
