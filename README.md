@@ -10,7 +10,7 @@ While the [Infer Static Analyzer](https://fbinfer.com/) is a very powerful stati
 Currently it is confirmed to work with:
 - Java 21
 - Maven 3.8.6
-- Linux/MacOS
+- Linux
 
 ### Usage
 
