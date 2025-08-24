@@ -1,4 +1,4 @@
-name: Trivy
+name: Trivy Code Security Scanning
 on:
   workflow_dispatch:
   pull_request:
