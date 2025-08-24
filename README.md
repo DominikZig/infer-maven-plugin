@@ -1,5 +1,6 @@
 [![CI](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/ci.yml)
-[![Qodana](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml)
+[![Qodana Code Quality Analysis](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml)
+[![Trivy Code Security Scanning](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/trivy.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/trivy.yml)
 
 ### Purpose
 
