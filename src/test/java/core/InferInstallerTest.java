@@ -43,6 +43,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -672,6 +673,32 @@ class InferInstallerTest {
                 .isTrue();
 
         assertTmpDirCleanup();
+    }
+
+    @Nested
+    class UnsupportedOsTest {
+
+        @DisplayName(
+            """
+         Given file is available to download\s
+         And user OS is Windows\s
+         When plugin tries to install Infer\s
+         Then throws MojoExecutionException
+       """)
+        @Test
+        void tryInstallInferUnsupportedOs(@TempDir Path dummyHome) {
+        System.setProperty("os.name", "Windows 10");
+            InferInstaller installerWithWindowSet = new InferInstaller(logger, httpClientFactory);
+
+            var mojoExecutionException = assertThrows(
+                MojoExecutionException.class, () -> installerWithWindowSet.tryInstallInfer(dummyHome.resolve("Downloads")));
+
+            assertThat(mojoExecutionException)
+                .hasMessageThat()
+                .isEqualTo("Unsupported Operating System: windows 10");
+
+            verify(logger, atLeastOnce()).error("The Operating System you are using for running Infer is unsupported: windows 10");
+        }
     }
 
     private HttpResponse<Path> successfulInferUrlHttpResponse(InvocationOnMock inv, byte[] tarBytes) {

@@ -33,13 +33,13 @@ public class InferInstaller {
 
     private static final String GITHUB_RELEASES_BASE = "https://github.com/facebook/infer/releases/download/";
     private static final String INFER_VERSION = "v1.2.0";
-    private static final String OPERATING_SYSTEM = System.getProperty("os.name").toLowerCase(Locale.ROOT);
     private static final String GENERIC_INFER_INSTALLATION_ERROR = "Error occurred when attempting to install Infer";
     private static final int POSIX_EXECUTE_PERMISSIONS = 73;
     private static final Set<PosixFilePermission> EXECUTE_PERMISSIONS = EnumSet.of(
             PosixFilePermission.OWNER_EXECUTE, PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_EXECUTE);
     private static final String INFER_LINUX_PATH = "infer-linux-x86_64-" + INFER_VERSION;
     private static final String INFER_MACOS_PATH = "infer-osx-arm64-" + INFER_VERSION;
+    private final String operatingSystem = System.getProperty("os.name").toLowerCase(Locale.ROOT);
 
     private final Logger logger;
 
@@ -141,16 +141,16 @@ public class InferInstaller {
             return installDir.resolve(INFER_MACOS_PATH).resolve("bin").resolve("infer");
         }
 
-        throw new MojoExecutionException(
-                "The Operating System you are using for running Infer is unsupported: " + OPERATING_SYSTEM);
+        logger.error("The Operating System you are using for running Infer is unsupported: " + operatingSystem);
+        throw new MojoExecutionException("Unsupported Operating System: " + operatingSystem);
     }
 
     private boolean isLinuxOs() {
-        return OPERATING_SYSTEM.contains("linux");
+        return operatingSystem.contains("linux");
     }
 
     private boolean isMacOs() {
-        return OPERATING_SYSTEM.contains("mac");
+        return operatingSystem.contains("mac");
     }
 
     private void untarInferTarball(Path inferTarballTmpDirFilePath, Path userHomeDownloadsPath)
