@@ -344,7 +344,7 @@ class InferInstallerTest {
         // Verify specific warn on missing hard link target
         verify(logger, atLeastOnce())
                 .warn(
-                        "Hard link target does not exist yet:" + ROOT_DIR + "/" + ROOT_DIR + "/bin/missing.txt");
+                        "Hard link target does not exist yet: " + ROOT_DIR + "/" + ROOT_DIR + "/bin/missing.txt");
         assertTmpDirCleanup();
     }
 
