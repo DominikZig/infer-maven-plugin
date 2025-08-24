@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Flow;
@@ -42,6 +43,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -54,6 +56,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class InferInstallerTest {
+
+    private static final String ROOT_DIR =
+            System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
+                    ? "infer-linux-x86_64-v1.2.0"
+                    : "infer-osx-arm64-v1.2.0";
 
     @Mock
     private Logger logger;
@@ -84,7 +91,7 @@ class InferInstallerTest {
         System.setProperty("user.home", dummyHome.toString());
 
         // Create minimal Infer tar.xz file bytes
-        String rootDir = "infer-linux-x86_64-v1.2.0";
+        String rootDir = ROOT_DIR;
         final byte[] tarBytes = createTarXz("hello".getBytes(StandardCharsets.UTF_8), rootDir);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
@@ -112,11 +119,8 @@ class InferInstallerTest {
     void tryInstallInferAlreadyExists(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
 
-        Path existingInferExePath = dummyHome
-                .resolve("Downloads")
-                .resolve("infer-linux-x86_64-v1.2.0")
-                .resolve("bin")
-                .resolve("infer");
+        Path existingInferExePath =
+                dummyHome.resolve("Downloads").resolve(ROOT_DIR).resolve("bin").resolve("infer");
 
         Files.createDirectories(existingInferExePath.getParent());
         Files.createFile(existingInferExePath);
@@ -154,18 +158,19 @@ class InferInstallerTest {
                 assertThrows(MojoExecutionException.class, () -> installer.tryInstallInfer(dummyHome));
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error occurred when attempting to install Infer");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
-        assertThat(mojoExecutionException)
-                .hasCauseThat()
-                .hasMessageThat()
-                .isEqualTo(
-                        "Failed to download Infer from https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz. HTTP status 404");
+        String expectedInferPath =
+                System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
+                        ? "infer-linux-x86_64"
+                        : "infer-osx-arm64";
+        String expectedErrorMessage =
+                "Failed to download Infer from https://github.com/facebook/infer/releases/download/v1.2.0/"
+                        + expectedInferPath + "-v1.2.0.tar.xz. HTTP status 404";
+        assertThat(mojoExecutionException).hasCauseThat().hasMessageThat().isEqualTo(expectedErrorMessage);
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger, times(1)).error(errorLogCaptor.capture());
 
-        assertThat(errorLogCaptor.getAllValues())
-                .containsExactly(
-                        "Failed to download Infer from https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz. HTTP status 404");
+        assertThat(errorLogCaptor.getAllValues()).containsExactly(expectedErrorMessage);
         assertTmpDirCleanup();
     }
 
@@ -259,7 +264,7 @@ class InferInstallerTest {
     @Test
     void tryInstallInferExtractsWithoutExecPerms(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
+        String rootDir = ROOT_DIR;
         byte[] tarBytes = createTarXz("content".getBytes(StandardCharsets.UTF_8), rootDir);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
@@ -293,7 +298,7 @@ class InferInstallerTest {
     @Test
     void tryInstallInferHandlesHardLinkExistingTarget(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
+        String rootDir = ROOT_DIR;
         byte[] tarBytes = createTarXzWithHardLinkExistingTarget("orig".getBytes(StandardCharsets.UTF_8), rootDir);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
@@ -325,7 +330,7 @@ class InferInstallerTest {
     @Test
     void tryInstallInferHandlesHardLinkMissingTargetWarns(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
+        String rootDir = ROOT_DIR;
         String missingLinkTarget = rootDir + "/bin/missing.txt";
         byte[] tarBytes = createTarXzWithHardLinkMissingTarget(
                 "content".getBytes(StandardCharsets.UTF_8), rootDir, missingLinkTarget);
@@ -339,8 +344,7 @@ class InferInstallerTest {
 
         // Verify specific warn on missing hard link target
         verify(logger, atLeastOnce())
-                .warn(
-                        "Hard link target does not exist yet: infer-linux-x86_64-v1.2.0/infer-linux-x86_64-v1.2.0/bin/missing.txt");
+                .warn("Hard link target does not exist yet: " + ROOT_DIR + "/" + ROOT_DIR + "/bin/missing.txt");
         assertTmpDirCleanup();
     }
 
@@ -356,8 +360,7 @@ class InferInstallerTest {
     @Test
     void tryInstallInferSymlinkDeletionFailureLogsWarnsAndThrows(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
-        byte[] tarBytes = createTarXzWithSymlinkOverNonEmptyDir(rootDir);
+        byte[] tarBytes = createTarXzWithSymlinkOverNonEmptyDir(ROOT_DIR);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
@@ -403,7 +406,7 @@ class InferInstallerTest {
     @Test
     void tryInstallInferCreatesSymlink_invokesCreateSymbolicLink(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
+        String rootDir = ROOT_DIR;
 
         // Archive includes:
         // - infer executable (so installation path resolves)
@@ -458,8 +461,7 @@ class InferInstallerTest {
     @Test
     void tryInstallInferLogsInfoAndDebugMessages(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
-        byte[] tarBytes = createTarXz("ok".getBytes(StandardCharsets.UTF_8), rootDir);
+        byte[] tarBytes = createTarXz("ok".getBytes(StandardCharsets.UTF_8), ROOT_DIR);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
@@ -502,8 +504,7 @@ class InferInstallerTest {
     void tryInstallInferIOExceptionOnCleanup(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
 
-        String rootDir = "infer-linux-x86_64-v1.2.0";
-        final byte[] tarBytes = createTarXz("hello".getBytes(StandardCharsets.UTF_8), rootDir);
+        final byte[] tarBytes = createTarXz("hello".getBytes(StandardCharsets.UTF_8), ROOT_DIR);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
@@ -558,10 +559,9 @@ class InferInstallerTest {
     @Test
     void tryInstallInferDoesNotSetExecPermsWhenModeHasNoExecBits(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
 
         // This archive sets mode 0644 (no exec bits) for bin/infer (same as createTarXz)
-        byte[] tarBytes = createTarXz("noexec".getBytes(StandardCharsets.UTF_8), rootDir);
+        byte[] tarBytes = createTarXz("noexec".getBytes(StandardCharsets.UTF_8), ROOT_DIR);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
@@ -591,10 +591,9 @@ class InferInstallerTest {
     @Test
     void tryInstallInferRestoresExecPermsWhenModeHasExecBits(@TempDir Path dummyHome) throws Exception {
         System.setProperty("user.home", dummyHome.toString());
-        String rootDir = "infer-linux-x86_64-v1.2.0";
 
         // Archive where the infer file has 0755 (exec bits present)
-        byte[] tarBytes = createTarXzWithExecBits("#!/bin/sh\necho ok".getBytes(StandardCharsets.UTF_8), rootDir);
+        byte[] tarBytes = createTarXzWithExecBits("#!/bin/sh\necho ok".getBytes(StandardCharsets.UTF_8), ROOT_DIR);
 
         when(httpClientFactory.getHttpClient()).thenReturn(httpClient);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
@@ -669,10 +668,36 @@ class InferInstallerTest {
         assertThat(errorLogCaptor.getAllValues().stream()
                         .anyMatch(s -> s.contains(
                                 "An error occurred when extracting the Infer tarball. The Infer executable was not found in: "
-                                        + dummyHome.resolve("Downloads") + "/infer-linux-x86_64-v1.2.0/bin/infer")))
+                                        + dummyHome.resolve("Downloads") + "/" + ROOT_DIR + "/bin/infer")))
                 .isTrue();
 
         assertTmpDirCleanup();
+    }
+
+    @Nested
+    class UnsupportedOsTest {
+
+        @DisplayName(
+                """
+         Given file is available to download\s
+         And user OS is Windows\s
+         When plugin tries to install Infer\s
+         Then throws MojoExecutionException
+       """)
+        @Test
+        void tryInstallInferUnsupportedOs(@TempDir Path dummyHome) {
+            System.setProperty("os.name", "Windows 10");
+            InferInstaller installerWithWindowSet = new InferInstaller(logger, httpClientFactory);
+
+            var mojoExecutionException = assertThrows(
+                    MojoExecutionException.class,
+                    () -> installerWithWindowSet.tryInstallInfer(dummyHome.resolve("Downloads")));
+
+            assertThat(mojoExecutionException).hasMessageThat().isEqualTo("Unsupported Operating System: windows 10");
+
+            verify(logger, atLeastOnce())
+                    .error("The Operating System you are using for running Infer is unsupported: windows 10");
+        }
     }
 
     private HttpResponse<Path> successfulInferUrlHttpResponse(InvocationOnMock inv, byte[] tarBytes) {
