@@ -8,9 +8,9 @@ While the [Infer Static Analyzer](https://fbinfer.com/) is a very powerful stati
 ### Requirements
 
 Currently it is confirmed to work with:
-- Java 21
-- Maven 3.8.6
-- Linux
+- Java 21+
+- Maven 3.8.6+
+- Linux, MacOS (ARM based)
 
 ### Usage
 
@@ -30,6 +30,9 @@ Add the plugin to your POM:
   </executions>
 </plugin>
 ```
+
+The plugin is configured to run on the `mvn compile` lifecycle step. Simply run `mvn compile` and Infer will
+scan your project and report issues. By default, the plugin will fail the build if any issues are reported.
 
 ### Configuration
 
