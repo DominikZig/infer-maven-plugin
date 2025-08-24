@@ -1,5 +1,6 @@
 [![CI](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/ci.yml)
-[![Qodana](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml)
+[![Qodana Code Quality Analysis](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/qodana_code_quality.yml)
+[![Trivy Code Security Scanning](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/trivy.yml/badge.svg)](https://github.com/DominikZig/infer-maven-plugin/actions/workflows/trivy.yml)
 
 ### Purpose
 
@@ -8,9 +9,9 @@ While the [Infer Static Analyzer](https://fbinfer.com/) is a very powerful stati
 ### Requirements
 
 Currently it is confirmed to work with:
-- Java 21
-- Maven 3.8.6
-- Linux
+- Java 21+
+- Maven 3.8.6+
+- Linux, MacOS (ARM based)
 
 ### Usage
 
@@ -30,6 +31,9 @@ Add the plugin to your POM:
   </executions>
 </plugin>
 ```
+
+The plugin is configured to run on the `mvn compile` lifecycle step. Simply run `mvn compile` and Infer will
+scan your project and report issues. By default, the plugin will fail the build if any issues are reported.
 
 ### Configuration
 
