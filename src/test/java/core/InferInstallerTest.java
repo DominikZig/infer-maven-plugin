@@ -344,8 +344,7 @@ class InferInstallerTest {
 
         // Verify specific warn on missing hard link target
         verify(logger, atLeastOnce())
-                .warn(
-                        "Hard link target does not exist yet: " + ROOT_DIR + "/" + ROOT_DIR + "/bin/missing.txt");
+                .warn("Hard link target does not exist yet: " + ROOT_DIR + "/" + ROOT_DIR + "/bin/missing.txt");
         assertTmpDirCleanup();
     }
 
@@ -679,7 +678,7 @@ class InferInstallerTest {
     class UnsupportedOsTest {
 
         @DisplayName(
-            """
+                """
          Given file is available to download\s
          And user OS is Windows\s
          When plugin tries to install Infer\s
@@ -687,17 +686,17 @@ class InferInstallerTest {
        """)
         @Test
         void tryInstallInferUnsupportedOs(@TempDir Path dummyHome) {
-        System.setProperty("os.name", "Windows 10");
+            System.setProperty("os.name", "Windows 10");
             InferInstaller installerWithWindowSet = new InferInstaller(logger, httpClientFactory);
 
             var mojoExecutionException = assertThrows(
-                MojoExecutionException.class, () -> installerWithWindowSet.tryInstallInfer(dummyHome.resolve("Downloads")));
+                    MojoExecutionException.class,
+                    () -> installerWithWindowSet.tryInstallInfer(dummyHome.resolve("Downloads")));
 
-            assertThat(mojoExecutionException)
-                .hasMessageThat()
-                .isEqualTo("Unsupported Operating System: windows 10");
+            assertThat(mojoExecutionException).hasMessageThat().isEqualTo("Unsupported Operating System: windows 10");
 
-            verify(logger, atLeastOnce()).error("The Operating System you are using for running Infer is unsupported: windows 10");
+            verify(logger, atLeastOnce())
+                    .error("The Operating System you are using for running Infer is unsupported: windows 10");
         }
     }
 

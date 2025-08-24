@@ -16,6 +16,9 @@ import org.junit.jupiter.api.AfterAll;
 @MavenJupiterExtension
 class FbInferMojoIT {
 
+    private static final String INFER_ISSUES_FOUND =
+            "Infer analysis completed with issues found, causing the build to fail. Check Infer results for more info.";
+
     @AfterAll
     static void cleanUp() throws IOException {
         Path userHomeDownloadsPath = Path.of(System.getProperty("user.home"), "Downloads");
@@ -50,6 +53,13 @@ class FbInferMojoIT {
         Path expectedReportPath = Path.of(
                 "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_npe_issue_found/expectedInferReport.txt");
         assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+
+        List<String> expectedMavenLogs = List.of(
+                "Found 1 issue",
+                "             Issue Type(ISSUED_TYPE_ID): #",
+                "  Null Dereference(NULLPTR_DEREFERENCE): 1");
+        assertThat(result).out().info().containsAll(expectedMavenLogs);
+        assertThat(result).out().warn().contains(INFER_ISSUES_FOUND);
     }
 
     @MavenTest
@@ -63,6 +73,13 @@ class FbInferMojoIT {
         Path expectedReportPath = Path.of(
                 "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_threadsafety_issue_found/expectedInferReport.txt");
         assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+
+        List<String> expectedMavenLogs = List.of(
+                "Found 1 issue",
+                "                        Issue Type(ISSUED_TYPE_ID): #",
+                "  Thread Safety Violation(THREAD_SAFETY_VIOLATION): 1");
+        assertThat(result).out().info().containsAll(expectedMavenLogs);
+        assertThat(result).out().warn().contains(INFER_ISSUES_FOUND);
     }
 
     @MavenTest
@@ -76,6 +93,14 @@ class FbInferMojoIT {
         Path expectedReportPath = Path.of(
                 "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_multiple_issues_found/expectedInferReport.txt");
         assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+
+        List<String> expectedMavenLogs = List.of(
+                "Found 2 issues",
+                "                        Issue Type(ISSUED_TYPE_ID): #",
+                "  Thread Safety Violation(THREAD_SAFETY_VIOLATION): 1",
+                "             Null Dereference(NULLPTR_DEREFERENCE): 1");
+        assertThat(result).out().info().containsAll(expectedMavenLogs);
+        assertThat(result).out().warn().contains(INFER_ISSUES_FOUND);
     }
 
     @MavenTest
@@ -90,6 +115,16 @@ class FbInferMojoIT {
         Path expectedReportPath = Path.of(
                 "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_issues_found_do_not_fail_build/expectedInferReport.txt");
         assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+
+        List<String> expectedMavenLogs = List.of(
+                "Found 1 issue",
+                "             Issue Type(ISSUED_TYPE_ID): #",
+                "  Null Dereference(NULLPTR_DEREFERENCE): 1");
+        assertThat(result).out().info().containsAll(expectedMavenLogs);
+        assertThat(result)
+                .out()
+                .warn()
+                .doesNotContain(INFER_ISSUES_FOUND); // does not show log stating build has failed due to Infer issues
     }
 
     @MavenTest
