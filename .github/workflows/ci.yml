@@ -59,7 +59,10 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ 'ubuntu-latest', 'macos-latest' ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: failsafe-reports
+          name: ${{ matrix.os }}-failsafe-reports
           path: |
             target/failsafe-reports/**
             target/maven-it/**
@@ -94,13 +97,25 @@ jobs:
         uses: actions/checkout@v4
       - uses: dorny/test-reporter@v2.1.1
         with:
-          artifact: surefire-reports
-          name: Unit Tests
+          artifact: ubuntu-latest-surefire-reports
+          name: Unit Tests on Linux
           path: '**/*.xml'
           reporter: java-junit
       - uses: dorny/test-reporter@v2.1.1
         with:
-          artifact: failsafe-reports
-          name: Integration Tests
+          artifact: macos-latest-surefire-reports
+          name: Unit Tests on MacOS
+          path: '**/*.xml'
+          reporter: java-junit
+      - uses: dorny/test-reporter@v2.1.1
+        with:
+          artifact: ubuntu-latest-failsafe-reports
+          name: Integration Tests on Linux
+          path: '**/TEST-*.xml'
+          reporter: java-junit
+      - uses: dorny/test-reporter@v2.1.1
+        with:
+          artifact: macos-latest-failsafe-reports
+          name: Integration Tests on MacOS
           path: '**/TEST-*.xml'
           reporter: java-junit
