@@ -8,6 +8,8 @@ import com.soebes.itf.jupiter.maven.MavenExecutionResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterAll;
 
@@ -17,8 +19,13 @@ class FbInferMojoIT {
     @AfterAll
     static void cleanUp() throws IOException {
         Path userHomeDownloadsPath = Path.of(System.getProperty("user.home"), "Downloads");
-        FileUtils.deleteDirectory(
-                userHomeDownloadsPath.resolve("infer-linux-x86_64-v1.2.0").toFile());
+
+        // Make sure any Infer distributions are cleaned up regardless of OS
+        List<String> inferDirs = List.of("infer-linux-x86_64-v1.2.0", "infer-osx-arm64-v1.2.0");
+
+        for (String dir : inferDirs) {
+            FileUtils.deleteDirectory(userHomeDownloadsPath.resolve(dir).toFile());
+        }
     }
 
     @MavenTest
@@ -94,9 +101,13 @@ class FbInferMojoIT {
                 .resolve("infer-out");
         assertThat(inferOut).isDirectory();
         assertThat(inferOut.resolve("report.txt")).isEmptyFile();
+        String expectedInferDir =
+                System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
+                        ? "infer-linux-x86_64-v1.2.0"
+                        : "infer-osx-arm64-v1.2.0";
         Path expectedCustomInferPath = Path.of(System.getProperty("user.home"))
                 .resolve("somecustomdir")
-                .resolve("infer-linux-x86_64-v1.2.0")
+                .resolve(expectedInferDir)
                 .resolve("bin")
                 .resolve("infer");
         assertThat(Files.exists(expectedCustomInferPath)).isTrue();

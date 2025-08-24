@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Flow;
@@ -154,18 +155,19 @@ class InferInstallerTest {
                 assertThrows(MojoExecutionException.class, () -> installer.tryInstallInfer(dummyHome));
         assertThat(mojoExecutionException.getMessage()).isEqualTo("Error occurred when attempting to install Infer");
         assertThat(mojoExecutionException).hasCauseThat().isInstanceOf(MojoExecutionException.class);
-        assertThat(mojoExecutionException)
-                .hasCauseThat()
-                .hasMessageThat()
-                .isEqualTo(
-                        "Failed to download Infer from https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz. HTTP status 404");
+        String expectedInferPath =
+                System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
+                        ? "infer-linux-x86_64"
+                        : "infer-osx-arm64";
+        String expectedErrorMessage =
+                "Failed to download Infer from https://github.com/facebook/infer/releases/download/v1.2.0/"
+                        + expectedInferPath + "-v1.2.0.tar.xz. HTTP status 404";
+        assertThat(mojoExecutionException).hasCauseThat().hasMessageThat().isEqualTo(expectedErrorMessage);
 
         var errorLogCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger, times(1)).error(errorLogCaptor.capture());
 
-        assertThat(errorLogCaptor.getAllValues())
-                .containsExactly(
-                        "Failed to download Infer from https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz. HTTP status 404");
+        assertThat(errorLogCaptor.getAllValues()).containsExactly(expectedErrorMessage);
         assertTmpDirCleanup();
     }
 
