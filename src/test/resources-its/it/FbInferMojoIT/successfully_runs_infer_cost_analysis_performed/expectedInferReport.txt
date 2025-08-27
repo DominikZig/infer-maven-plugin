@@ -1,0 +1,22 @@
+#0
+src/main/java/example/ClassWithBufferOverrunIssue.java:11: error: Buffer Overrun L2
+  Offset: [0, 5] Size: 5. 
+   9.           int[] a = new int[5];
+  10.           for (int i = 0; i <= 5; i++) {
+  11. >             a[i] = i;
+  12.           }
+  13.       }
+
+#1
+src/main/java/example/ClassWithBufferOverrunIssue.java:20: error: Buffer Overrun L1
+  Offset: 3 Size: 3. 
+  18.           a[1] = 2;
+  19.           a[2] = 3;
+  20. >         return a[3];
+  21.       }
+  22.   }
+
+Found 2 issues
+            Issue Type(ISSUED_TYPE_ID): #
+  Buffer Overrun L2(BUFFER_OVERRUN_L2): 1
+  Buffer Overrun L1(BUFFER_OVERRUN_L1): 1
