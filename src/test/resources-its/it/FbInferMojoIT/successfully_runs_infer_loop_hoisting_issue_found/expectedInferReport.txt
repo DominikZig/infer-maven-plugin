@@ -1,0 +1,12 @@
+#0
+src/main/java/example/ClassWithLoopHoistingIssue.java:23: error: Expensive Loop Invariant Call
+  The call to void ClassWithLoopHoistingIssue.foo_linear(int) at line 23 is loop-invariant and expensive (has complexity O(size)). Move it out of the loop at line 22.
+  21.       void symbolic_expensive_hoist(int size) {
+  22.           for (int i = 0; i < size; i++) {
+  23. >             foo_linear(size); // hoist
+  24.           }
+  25.       }
+
+Found 1 issue
+                                    Issue Type(ISSUED_TYPE_ID): #
+  Expensive Loop Invariant Call(EXPENSIVE_LOOP_INVARIANT_CALL): 1

@@ -38,7 +38,8 @@
           </execution>
         </executions>
         <configuration>
-          <failOnIssue>false</failOnIssue>
+          <failOnIssue>true</failOnIssue>
+          <enableJavaCheckers>false</enableJavaCheckers>
         </configuration>
       </plugin>
     </plugins>

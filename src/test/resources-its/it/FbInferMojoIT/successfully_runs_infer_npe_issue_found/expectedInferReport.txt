@@ -7,6 +7,16 @@ src/main/java/example/ClassWithNpeIssue.java:10: error: Null Dereference
   11.       }
   12.   }
 
-Found 1 issue
+#1
+src/main/java/example/ClassWithNpeIssue.java:10: error: Null Dereference
+  object `str` last assigned on line 9 could be null and is dereferenced at line 10. 
+   8.       private static void nullPointerDereference() {
+   9.           String str = null;
+  10. >         int length = str.length();
+  11.       }
+  12.   }
+
+Found 2 issues
              Issue Type(ISSUED_TYPE_ID): #
+     Null Dereference(NULL_DEREFERENCE): 1
   Null Dereference(NULLPTR_DEREFERENCE): 1

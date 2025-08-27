@@ -14,6 +14,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -30,14 +31,15 @@ import org.codehaus.plexus.logging.Logger;
 @Singleton
 public class InferInstaller {
 
-    private static final URI INFER_DOWNLOAD_URI =
-            URI.create("https://github.com/facebook/infer/releases/download/v1.2.0/infer-linux-x86_64-v1.2.0.tar.xz");
+    private static final String GITHUB_RELEASES_BASE = "https://github.com/facebook/infer/releases/download/";
+    private static final String INFER_VERSION = "v1.2.0";
     private static final String GENERIC_INFER_INSTALLATION_ERROR = "Error occurred when attempting to install Infer";
-    private static final String DOWNLOAD_INFER_INSTALLATION_ERROR =
-            "Failed to download Infer from " + INFER_DOWNLOAD_URI + ". HTTP status ";
     private static final int POSIX_EXECUTE_PERMISSIONS = 73;
     private static final Set<PosixFilePermission> EXECUTE_PERMISSIONS = EnumSet.of(
             PosixFilePermission.OWNER_EXECUTE, PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_EXECUTE);
+    private static final String INFER_LINUX_PATH = "infer-linux-x86_64-" + INFER_VERSION;
+    private static final String INFER_MACOS_PATH = "infer-osx-arm64-" + INFER_VERSION;
+    private final String operatingSystem = System.getProperty("os.name").toLowerCase(Locale.ROOT);
 
     private final Logger logger;
 
@@ -50,8 +52,7 @@ public class InferInstaller {
     }
 
     public Path tryInstallInfer(Path installDir) throws MojoExecutionException, MojoFailureException {
-        Path inferExe =
-                installDir.resolve("infer-linux-x86_64-v1.2.0").resolve("bin").resolve("infer");
+        Path inferExe = determineInferExe(installDir);
 
         if (Files.exists(inferExe)) {
             logger.info("Infer executable already exists in: " + inferExe + ". Using this for Infer analysis.");
@@ -63,14 +64,16 @@ public class InferInstaller {
         try {
             logger.info("Attempting to download Infer");
 
-            URL url = INFER_DOWNLOAD_URI.toURL();
+            String installPath = isLinuxOs() ? INFER_LINUX_PATH : INFER_MACOS_PATH;
+            URI inferDownloadUri = URI.create(GITHUB_RELEASES_BASE + INFER_VERSION + "/" + installPath + ".tar.xz");
+            URL inferDownloadUrl = inferDownloadUri.toURL();
 
-            Path inferTarballFileName = Path.of(url.getPath()).getFileName();
+            Path inferTarballFileName = Path.of(inferDownloadUrl.getPath()).getFileName();
             inferDownloadTmpDir = Files.createTempDirectory("infer-download-");
             Path inferTarballTmpDirFilePath = inferDownloadTmpDir.resolve(inferTarballFileName);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(INFER_DOWNLOAD_URI)
+                    .uri(inferDownloadUri)
                     .timeout(Duration.ofSeconds(60))
                     .GET()
                     .build();
@@ -82,8 +85,10 @@ public class InferInstaller {
                     .send(request, HttpResponse.BodyHandlers.ofFile(inferTarballTmpDirFilePath));
 
             if (response.statusCode() != 200) {
-                logger.error(DOWNLOAD_INFER_INSTALLATION_ERROR + response.statusCode());
-                throw new MojoExecutionException(DOWNLOAD_INFER_INSTALLATION_ERROR + response.statusCode());
+                logger.error(
+                        "Failed to download Infer from " + inferDownloadUri + ". HTTP status " + response.statusCode());
+                throw new MojoExecutionException(
+                        "Failed to download Infer from " + inferDownloadUri + ". HTTP status " + response.statusCode());
             }
 
             logger.debug("Successfully downloaded to tmp dir: " + inferTarballTmpDirFilePath);
@@ -127,6 +132,25 @@ public class InferInstaller {
                     e);
             throw new MojoExecutionException(GENERIC_INFER_INSTALLATION_ERROR, e);
         }
+    }
+
+    private Path determineInferExe(Path installDir) throws MojoExecutionException {
+        if (isLinuxOs()) {
+            return installDir.resolve(INFER_LINUX_PATH).resolve("bin").resolve("infer");
+        } else if (isMacOs()) {
+            return installDir.resolve(INFER_MACOS_PATH).resolve("bin").resolve("infer");
+        }
+
+        logger.error("The Operating System you are using for running Infer is unsupported: " + operatingSystem);
+        throw new MojoExecutionException("Unsupported Operating System: " + operatingSystem);
+    }
+
+    private boolean isLinuxOs() {
+        return operatingSystem.contains("linux");
+    }
+
+    private boolean isMacOs() {
+        return operatingSystem.contains("mac");
     }
 
     private void untarInferTarball(Path inferTarballTmpDirFilePath, Path userHomeDownloadsPath)

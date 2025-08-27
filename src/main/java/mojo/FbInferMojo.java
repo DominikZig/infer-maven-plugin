@@ -31,6 +31,9 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(property = "failOnIssue", defaultValue = "true")
     private boolean failOnIssue;
 
+    @Parameter(property = "enableJavaCheckers", defaultValue = "true")
+    private boolean enableJavaCheckers;
+
     @Parameter(property = "resultsDir", defaultValue = "${project.build.directory}/infer-out")
     private String resultsDir;
 
@@ -45,7 +48,8 @@ public class FbInferMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        InferParams inferParams = new InferParams(project, failOnIssue, resultsDir, installDir.toPath());
+        InferParams inferParams =
+                new InferParams(project, failOnIssue, enableJavaCheckers, resultsDir, installDir.toPath());
 
         Path inferExe = installer.tryInstallInfer(inferParams.installDir());
 

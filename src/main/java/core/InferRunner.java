@@ -31,7 +31,11 @@ public class InferRunner {
     private static final String JAVAC_DEBUG_OPTION = "-g";
     private static final String JAVAC_DEST_DIRECTORY_OPTION = "-d";
     private static final String JAVAC_ARGFILE_PREFIX = "@";
-    public static final String INFER_FAIL_ON_ISSUE_OPTION = "--fail-on-issue";
+    private static final String INFER_FAIL_ON_ISSUE_OPTION = "--fail-on-issue";
+    private static final String INFER_BUFFEROVERRUN_OPTION = "--bufferoverrun";
+    private static final String INFER_COST_OPTION = "--cost";
+    private static final String INFER_LOOP_HOISTING_OPTION = "--loop-hoisting";
+    private static final String INFER_BIABDUCTION_OPTION = "--biabduction";
     private static final String INFER_RESULTS_DIR_OPTION = "--results-dir";
     private static final String INFER_ARG_TERMINATOR = "--";
     private static final long PROCESS_MAX_TIMEOUT = 1L;
@@ -51,6 +55,7 @@ public class InferRunner {
             throws MojoExecutionException, MojoFailureException {
         final MavenProject project = inferParams.project();
         final boolean failOnIssue = inferParams.failOnIssue();
+        final boolean enableJavaCheckers = inferParams.enableJavaCheckers();
         final String resultsDir = inferParams.resultsDir();
 
         Objects.requireNonNull(project, "Maven project information required to proceed with Infer analysis");
@@ -89,7 +94,9 @@ public class InferRunner {
 
             List<String> javacArgs =
                     javacArgBuilder(compileClasspath, project.getBuild().getOutputDirectory(), argfileWithJavaSources);
-            List<String> inferArgs = inferArgBuilder(inferExe.toString(), resultsDirPath.toString(), javacArgs);
+            List<String> inferArgs = enableJavaCheckers
+                    ? inferArgBuilderWithJavaCheckers(inferExe.toString(), resultsDirPath.toString(), javacArgs)
+                    : inferArgBuilderNoJavaCheckers(inferExe.toString(), resultsDirPath.toString(), javacArgs);
 
             int exitCode = executeInferCommands(inferArgs, project.getBasedir().toPath());
 
@@ -173,7 +180,25 @@ public class InferRunner {
         return javacArgs;
     }
 
-    private List<String> inferArgBuilder(String inferExeOption, String resultsDirPathValue, List<String> javacArgs) {
+    private List<String> inferArgBuilderWithJavaCheckers(
+            String inferExeOption, String resultsDirPathValue, List<String> javacArgs) {
+        return Stream.concat(
+                        Stream.of(
+                                inferExeOption,
+                                INFER_BUFFEROVERRUN_OPTION,
+                                INFER_COST_OPTION,
+                                INFER_LOOP_HOISTING_OPTION,
+                                INFER_BIABDUCTION_OPTION,
+                                INFER_FAIL_ON_ISSUE_OPTION,
+                                INFER_RESULTS_DIR_OPTION,
+                                resultsDirPathValue,
+                                INFER_ARG_TERMINATOR),
+                        javacArgs.stream())
+                .toList();
+    }
+
+    private List<String> inferArgBuilderNoJavaCheckers(
+            String inferExeOption, String resultsDirPathValue, List<String> javacArgs) {
         return Stream.concat(
                         Stream.of(
                                 inferExeOption,
