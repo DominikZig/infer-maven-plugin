@@ -8,6 +8,15 @@ src/main/java/example/ClassWithMultipleIssues.java:12: error: Null Dereference
   14.   
 
 #1
+src/main/java/example/ClassWithMultipleIssues.java:12: error: Null Dereference
+  object `str` last assigned on line 11 could be null and is dereferenced at line 12. 
+  10.       private static void nullPointerDereference() {
+  11.           String str = null;
+  12. >         int length = str.length();
+  13.       }
+  14.   
+
+#2
 src/main/java/example/ClassWithMultipleIssues.java:21: warning: Thread Safety Violation
   Unprotected write. Non-private method `ClassWithMultipleIssues$Dinner.makeDinner()` indirectly writes to field `this.mTemperature` outside of synchronization.
  Reporting because the current class is annotated `@ThreadSafe`, so we assume that this method can run in parallel with other non-private methods in the class (including itself). 
@@ -17,7 +26,8 @@ src/main/java/example/ClassWithMultipleIssues.java:21: warning: Thread Safety Vi
   22.           }
   23.   
 
-Found 2 issues
+Found 3 issues
                         Issue Type(ISSUED_TYPE_ID): #
   Thread Safety Violation(THREAD_SAFETY_VIOLATION): 1
+                Null Dereference(NULL_DEREFERENCE): 1
              Null Dereference(NULLPTR_DEREFERENCE): 1
