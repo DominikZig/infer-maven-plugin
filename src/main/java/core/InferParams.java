@@ -9,8 +9,4 @@ public record InferParams(
         boolean enableJavaCheckers,
         String resultsDir,
         Path installDir,
-        java.util.List<String> extraInferArgs) {
-    public InferParams {
-        extraInferArgs = extraInferArgs == null ? java.util.List.of() : extraInferArgs;
-    }
-}
+        java.util.List<String> extraInferArgs) {}
