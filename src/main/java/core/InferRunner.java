@@ -199,7 +199,8 @@ public class InferRunner {
                                 INFER_RESULTS_DIR_OPTION,
                                 resultsDirPathValue),
                         Stream.concat(
-                                extraInferArgs != null ? extraInferArgs.stream() : Stream.of(),
+                                extraInferArgs.stream()
+                                        .flatMap(arg -> Stream.of(arg.split("\\s+"))),
                                 Stream.concat(
                                         Stream.of(INFER_ARG_TERMINATOR),
                                         javacArgs.stream())))
@@ -218,7 +219,8 @@ public class InferRunner {
                                 INFER_RESULTS_DIR_OPTION,
                                 resultsDirPathValue),
                         Stream.concat(
-                                extraInferArgs != null ? extraInferArgs.stream() : Stream.of(),
+                                extraInferArgs.stream()
+                                        .flatMap(arg -> Stream.of(arg.split("\\s+"))),
                                 Stream.concat(
                                         Stream.of(INFER_ARG_TERMINATOR),
                                         javacArgs.stream())))

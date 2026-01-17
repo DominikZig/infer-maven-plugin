@@ -40,8 +40,7 @@
         <configuration>
           <failOnIssue>false</failOnIssue>
           <extraInferArgs>
-             <arg>help</arg>
-             <arg>--list-checkers</arg>
+             <arg>help --list-checkers</arg>
           </extraInferArgs>
         </configuration>
       </plugin>

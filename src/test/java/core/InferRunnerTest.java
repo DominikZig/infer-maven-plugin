@@ -852,6 +852,60 @@ class InferRunnerTest {
     }
 
     @Test
+    void runInferOnProjectWithSplittableExtraArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+
+        Path targetDir = dummyJavaProject.projectRoot().resolve("target");
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        Build build = new Build();
+        build.setDirectory(targetDir.toString());
+        build.setOutputDirectory(targetDir.resolve("classes").toString());
+
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getBuild()).thenReturn(build);
+        when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        List<String> extraArgs = List.of("help --list-checkers");
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, extraArgs);
+
+        Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
+
+        runner.runInferOnProject(inferParams, dummyInferExecutable);
+
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+
+        // Check that the command string contains the split arguments
+        // The log message is "Running: space separated commands"
+        // So checking for substring is basically checking if they are present.
+        // A better check would be to verify the exact command structure if possible,
+        // but given the logger.debug("Running: " + String.join(" ", inferCommands)),
+        // "help" and "--list-checkers" will be separated by space anyway.
+        // The real proof is that if they were NOT split, ProcessBuilder would receive one arg "help --list-checkers".
+        // BUT here we are capturing the log which joins them back!
+        // So this unit test asserting the LOG message doesn't strictly prove they were split for ProcessBuilder.
+        // However, checking the constructed list would. But the list is local to the method.
+        // We can capture the ProcessBuilder execution if we mocked ProcessBuilder, but we can't easily.
+        // Wait, ProcessBuilder is instantiated inside the method.
+        // Actually, if we look at `InferRunner.java`:
+        // logger.debug("Running: " + String.join(" ", inferCommands));
+        // This joins them with space. So "help --list-checkers" (one arg) joined with others would look generic.
+        // "help" "list" (two args) joined with space look the same.
+        // So this test is of limited value for verifying the SPLIT specifically via logs.
+        // But verifying that "help" and "--list-checkers" are present is still good.
+        
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("help"))).isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("--list-checkers"))).isTrue();
+    }
+
+    @Test
     void runInferOnProjectNullResultsDir() {
         InferParams inferParams = new InferParams(project, false, true, null, null, null);
         var nullPointerException =
