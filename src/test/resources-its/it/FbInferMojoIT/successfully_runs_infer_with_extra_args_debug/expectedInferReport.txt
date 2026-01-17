@@ -1,0 +1,32 @@
+#0
+src/main/java/example/ClassWithNpeIssueWithDebugFlag.java:5: error: Bad Footprint
+  . 
+  3.   public class ClassWithNpeIssueWithDebugFlag {
+  4.     public static void main(String[] args) {
+  5. >     System.out.println("NPE Issue Found");
+  6.     }
+  7.   
+
+#1
+src/main/java/example/ClassWithNpeIssueWithDebugFlag.java:10: error: Null Dereference
+  `str` could be null (null value originating from line 9) and is dereferenced. 
+   8.       private static void nullPointerDereference() {
+   9.           String str = null;
+  10. >         int length = str.length();
+  11.       }
+  12.   }
+
+#2
+src/main/java/example/ClassWithNpeIssueWithDebugFlag.java:10: error: Null Dereference
+  [B1] object `str` last assigned on line 9 could be null and is dereferenced at line 10. 
+   8.       private static void nullPointerDereference() {
+   9.           String str = null;
+  10. >         int length = str.length();
+  11.       }
+  12.   }
+
+Found 3 issues
+             Issue Type(ISSUED_TYPE_ID): #
+     Null Dereference(NULL_DEREFERENCE): 1
+  Null Dereference(NULLPTR_DEREFERENCE): 1
+           Bad Footprint(Bad_footprint): 1

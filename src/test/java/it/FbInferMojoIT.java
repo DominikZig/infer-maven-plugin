@@ -275,16 +275,26 @@ class FbInferMojoIT {
 
     @MavenTest
     void successfully_runs_infer_with_extra_args_debug(MavenExecutionResult result) {
-        assertThat(result).isSuccessful();
-        // --debug flag enables debug logging in Infer, which typically prints more detailed info
-        // We can check for some expected debug output or just that it didn't crash
-        // Infer --debug usually prints internal info, let's just assert success for now
-        // and maybe check for a log line that only appears in debug mode if possible,
-        // but robustly just ensuring it runs with the flag is a good first step.
-        // Actually, let's verify that the command runner logged the debug Arg.
-        // But here we are checking the Maven output.
-        // Let's check for "Logging static analysis config" or similar which might appear in debug
-        // Or simply that the build succeeded with the flag.
-        assertThat(result).out().info().anySatisfy(line -> assertThat(line).contains("Infer analysis completed"));
+        assertThat(result).isFailure();
+        Path inferOut = result.getMavenProjectResult()
+            .getTargetProjectDirectory()
+            .resolve("target")
+            .resolve("infer-out");
+        assertThat(inferOut).isDirectory();
+        Path expectedReportPath = Path.of(
+            "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_with_extra_args_debug/expectedInferReport.txt");
+        assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
+
+        List<String> expectedMavenLogs = List.of(
+            "Found 3 issues",
+            "             Issue Type(ISSUED_TYPE_ID): #",
+            "     Null Dereference(NULL_DEREFERENCE): 1",
+            "  Null Dereference(NULLPTR_DEREFERENCE): 1",
+            "           Bad Footprint(Bad_footprint): 1");
+        assertThat(result).out().info().containsAll(expectedMavenLogs);
+        assertThat(result).out().warn().contains(INFER_ISSUES_FOUND);
+
+        //assert debug specific log statement appears
+        assertThat(result).out().info().contains("Logs in " + inferOut + "/logs");
     }
 }
