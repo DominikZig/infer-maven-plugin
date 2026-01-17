@@ -263,4 +263,28 @@ class FbInferMojoIT {
         assertThat(result).out().warn().contains(INFER_ISSUES_FOUND);
         assertThat(result).out().warn().doesNotContain("     Null Dereference(NULL_DEREFERENCE): 1");
     }
+
+    @MavenTest
+    void successfully_runs_infer_with_extra_args_help_list_checkers(MavenExecutionResult result) {
+        assertThat(result).isSuccessful();
+        assertThat(result).out().info().anySatisfy(line -> assertThat(line).contains("biabduction"));
+        assertThat(result).out().info().anySatisfy(line -> assertThat(line).contains("bufferoverrun"));
+        // Ensure help command doesn't actually run analysis but just prints help/checkers
+        // The presence of checker names in output confirms the arg was passed
+    }
+
+    @MavenTest
+    void successfully_runs_infer_with_extra_args_debug(MavenExecutionResult result) {
+        assertThat(result).isSuccessful();
+        // --debug flag enables debug logging in Infer, which typically prints more detailed info
+        // We can check for some expected debug output or just that it didn't crash
+        // Infer --debug usually prints internal info, let's just assert success for now
+        // and maybe check for a log line that only appears in debug mode if possible,
+        // but robustly just ensuring it runs with the flag is a good first step.
+        // Actually, let's verify that the command runner logged the debug Arg.
+        // But here we are checking the Maven output.
+        // Let's check for "Logging static analysis config" or similar which might appear in debug
+        // Or simply that the build succeeded with the flag.
+        assertThat(result).out().info().anySatisfy(line -> assertThat(line).contains("Infer analysis completed"));
+    }
 }

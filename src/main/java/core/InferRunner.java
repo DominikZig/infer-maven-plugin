@@ -57,6 +57,7 @@ public class InferRunner {
         final boolean failOnIssue = inferParams.failOnIssue();
         final boolean enableJavaCheckers = inferParams.enableJavaCheckers();
         final String resultsDir = inferParams.resultsDir();
+        final List<String> extraInferArgs = inferParams.extraInferArgs();
 
         Objects.requireNonNull(project, "Maven project information required to proceed with Infer analysis");
         Objects.requireNonNull(resultsDir, "Directory to store results required to proceed with Infer analysis");
@@ -95,8 +96,10 @@ public class InferRunner {
             List<String> javacArgs =
                     javacArgBuilder(compileClasspath, project.getBuild().getOutputDirectory(), argfileWithJavaSources);
             List<String> inferArgs = enableJavaCheckers
-                    ? inferArgBuilderWithJavaCheckers(inferExe.toString(), resultsDirPath.toString(), javacArgs)
-                    : inferArgBuilderNoJavaCheckers(inferExe.toString(), resultsDirPath.toString(), javacArgs);
+                    ? inferArgBuilderWithJavaCheckers(
+                            inferExe.toString(), resultsDirPath.toString(), javacArgs, extraInferArgs)
+                    : inferArgBuilderNoJavaCheckers(
+                            inferExe.toString(), resultsDirPath.toString(), javacArgs, extraInferArgs);
 
             int exitCode = executeInferCommands(inferArgs, project.getBasedir().toPath());
 
@@ -181,7 +184,10 @@ public class InferRunner {
     }
 
     private List<String> inferArgBuilderWithJavaCheckers(
-            String inferExeOption, String resultsDirPathValue, List<String> javacArgs) {
+            String inferExeOption,
+            String resultsDirPathValue,
+            List<String> javacArgs,
+            List<String> extraInferArgs) {
         return Stream.concat(
                         Stream.of(
                                 inferExeOption,
@@ -191,22 +197,31 @@ public class InferRunner {
                                 INFER_BIABDUCTION_OPTION,
                                 INFER_FAIL_ON_ISSUE_OPTION,
                                 INFER_RESULTS_DIR_OPTION,
-                                resultsDirPathValue,
-                                INFER_ARG_TERMINATOR),
-                        javacArgs.stream())
+                                resultsDirPathValue),
+                        Stream.concat(
+                                extraInferArgs != null ? extraInferArgs.stream() : Stream.of(),
+                                Stream.concat(
+                                        Stream.of(INFER_ARG_TERMINATOR),
+                                        javacArgs.stream())))
                 .toList();
     }
 
     private List<String> inferArgBuilderNoJavaCheckers(
-            String inferExeOption, String resultsDirPathValue, List<String> javacArgs) {
+            String inferExeOption,
+            String resultsDirPathValue,
+            List<String> javacArgs,
+            List<String> extraInferArgs) {
         return Stream.concat(
                         Stream.of(
                                 inferExeOption,
                                 INFER_FAIL_ON_ISSUE_OPTION,
                                 INFER_RESULTS_DIR_OPTION,
-                                resultsDirPathValue,
-                                INFER_ARG_TERMINATOR),
-                        javacArgs.stream())
+                                resultsDirPathValue),
+                        Stream.concat(
+                                extraInferArgs != null ? extraInferArgs.stream() : Stream.of(),
+                                Stream.concat(
+                                        Stream.of(INFER_ARG_TERMINATOR),
+                                        javacArgs.stream())))
                 .toList();
     }
 
