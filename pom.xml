@@ -155,7 +155,7 @@
           </systemPropertyVariables>
           <properties>
           </properties>
-          <forkCount>4C</forkCount>
+          <forkCount>1.5C</forkCount>
           <reuseForks>true</reuseForks>
         </configuration>
         <executions>
