@@ -1,12 +1,13 @@
-package mojo;
+package io.github.dominikzig.infer.maven.plugin.mojo;
 
-import core.InferInstaller;
-import core.InferParams;
-import core.InferRunner;
+import io.github.dominikzig.infer.maven.plugin.core.InferInstaller;
+import io.github.dominikzig.infer.maven.plugin.core.InferParams;
+import io.github.dominikzig.infer.maven.plugin.core.InferRunner;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.inject.Inject;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -43,10 +44,16 @@ public class FbInferMojo extends AbstractMojo {
     private File installDir;
 
     @Parameter(property = "extraArgs")
-    private final List<String> extraArgs = new ArrayList<>();
+    private List<String> extraArgs = new ArrayList<>();
 
     @Parameter(property = "customArgs")
-    private final List<String> customArgs = new ArrayList<>();
+    private List<String> customArgs = new ArrayList<>();
+
+    // No-arg constructor required by some Mojo containers; keep for compatibility.
+    public FbInferMojo() {
+        this.installer = null;
+        this.runner = null;
+    }
 
     @Inject
     public FbInferMojo(InferInstaller installer, InferRunner runner) {
@@ -56,14 +63,22 @@ public class FbInferMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        Objects.requireNonNull(project, "MavenProject must not be null");
+        Objects.requireNonNull(installDir, "installDir must not be null");
+        Objects.requireNonNull(resultsDir, "resultsDir must not be null");
+
+        // Defensive copies to avoid later external mutation
+        List<String> safeExtraArgs = extraArgs == null ? List.of() : List.copyOf(extraArgs);
+        List<String> safeCustomArgs = customArgs == null ? List.of() : List.copyOf(customArgs);
+
         InferParams inferParams = new InferParams(
                 project,
                 failOnIssue,
                 enableJavaCheckers,
                 resultsDir,
                 installDir.toPath(),
-            extraArgs,
-            customArgs);
+                safeExtraArgs,
+                safeCustomArgs);
 
         Path inferExe = installer.tryInstallInfer(inferParams.installDir());
 
