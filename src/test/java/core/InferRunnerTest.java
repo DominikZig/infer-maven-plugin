@@ -815,7 +815,7 @@ class InferRunnerTest {
  Given a valid Java source\s
  And and process exits with normal termination flag of 0\s
  And enableJavaCheckers param is set to false\s
- And extraInferArgs provided
+ And extraArgs provided
  When running Infer\s
  Then completes successfully and does not include extra java checkers in Infer args\s
  and includes extra args in command
@@ -881,7 +881,7 @@ class InferRunnerTest {
     @DisplayName(
             """
         Given a valid Java source
-        And a single extraInferArgs provided
+        And a single extraArgs provided
         When running Infer
         Then completes successfully and includes extra args in command
        """)
@@ -933,7 +933,7 @@ class InferRunnerTest {
     @DisplayName(
             """
      Given a valid Java source
-     And multiple extraInferArgs provided
+     And multiple extraArgs provided
      When running Infer
      Then completes successfully and includes extra args in command
     """)
@@ -987,7 +987,7 @@ class InferRunnerTest {
     @DisplayName(
             """
      Given a valid Java source
-     And a single customInferArgs provided
+     And a single customArgs provided
      When running Infer
      Then completes successfully and includes custom args in command
     """)
@@ -1039,7 +1039,7 @@ class InferRunnerTest {
     @DisplayName(
             """
      Given a valid Java source
-     And multiple customInferArgs provided
+     And multiple customArgs provided
      When running Infer
      Then completes successfully and includes custom args in command
     """)
@@ -1101,13 +1101,13 @@ class InferRunnerTest {
     }
 
     @DisplayName(
-            """
+    """
      Given a valid Java source
-     And customInferArgs provided
-     And extraInferArgs provided
+     And customArgs provided
+     And extraArgs provided
      When running Infer
-     Then throws MojoExecutionException\s
-             """)
+     Then throws MojoExecutionException
+     """)
     @Test
     void runInferOnProjectBothCustomAndExtraArgs(@TempDir Path tmp) throws Exception {
         DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);

@@ -58,8 +58,8 @@ public class InferRunner {
         final boolean failOnIssue = inferParams.failOnIssue();
         final boolean enableJavaCheckers = inferParams.enableJavaCheckers();
         final String resultsDir = inferParams.resultsDir();
-        final List<String> extraInferArgs = inferParams.extraInferArgs();
-        final List<String> customInferArgs = inferParams.customInferArgs();
+        final List<String> extraInferArgs = inferParams.extraArgs();
+        final List<String> customInferArgs = inferParams.customArgs();
 
         Objects.requireNonNull(project, "Maven project information required to proceed with Infer analysis");
         Objects.requireNonNull(resultsDir, "Directory to store results required to proceed with Infer analysis");

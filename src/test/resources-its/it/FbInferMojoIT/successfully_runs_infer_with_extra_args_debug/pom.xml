@@ -38,9 +38,9 @@
           </execution>
         </executions>
         <configuration>
-          <extraInferArgs>
+          <extraArgs>
              <arg>--debug</arg>
-          </extraInferArgs>
+          </extraArgs>
         </configuration>
       </plugin>
     </plugins>

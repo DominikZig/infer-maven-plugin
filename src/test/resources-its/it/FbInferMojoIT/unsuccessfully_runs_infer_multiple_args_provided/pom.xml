@@ -39,13 +39,13 @@
         </executions>
         <configuration>
           <failOnIssue>false</failOnIssue>
-          <extraInferArgs>
+          <extraArgs>
             <arg>--debug</arg>
-          </extraInferArgs>
-          <customInferArgs>
+          </extraArgs>
+          <customArgs>
              <arg>help --list-checkers</arg>
              <arg>--list-issue-types</arg>
-          </customInferArgs>
+          </customArgs>
         </configuration>
       </plugin>
     </plugins>

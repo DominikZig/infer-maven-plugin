@@ -42,11 +42,11 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(property = "installDir", defaultValue = "${user.home}/Downloads")
     private File installDir;
 
-    @Parameter(property = "extraInferArgs")
-    private List<String> extraInferArgs = new ArrayList<>();
+    @Parameter(property = "extraArgs")
+    private final List<String> extraArgs = new ArrayList<>();
 
-    @Parameter(property = "customInferArgs")
-    private List<String> customInferArgs = new ArrayList<>();
+    @Parameter(property = "customArgs")
+    private final List<String> customArgs = new ArrayList<>();
 
     @Inject
     public FbInferMojo(InferInstaller installer, InferRunner runner) {
@@ -62,8 +62,8 @@ public class FbInferMojo extends AbstractMojo {
                 enableJavaCheckers,
                 resultsDir,
                 installDir.toPath(),
-                extraInferArgs,
-                customInferArgs);
+            extraArgs,
+            customArgs);
 
         Path inferExe = installer.tryInstallInfer(inferParams.installDir());
 

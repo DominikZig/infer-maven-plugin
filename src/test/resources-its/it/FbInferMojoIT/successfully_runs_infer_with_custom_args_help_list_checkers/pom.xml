@@ -39,9 +39,9 @@
         </executions>
         <configuration>
           <failOnIssue>false</failOnIssue>
-          <customInferArgs>
+          <customArgs>
              <arg>help --list-checkers</arg>
-          </customInferArgs>
+          </customArgs>
         </configuration>
       </plugin>
     </plugins>

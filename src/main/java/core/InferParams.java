@@ -11,10 +11,10 @@ public record InferParams(
         boolean enableJavaCheckers,
         String resultsDir,
         Path installDir,
-        List<String> extraInferArgs,
-        List<String> customInferArgs) {
+        List<String> extraArgs,
+        List<String> customArgs) {
     public InferParams {
-        extraInferArgs = extraInferArgs == null ? Collections.emptyList() : extraInferArgs;
-        customInferArgs = customInferArgs == null ? Collections.emptyList() : customInferArgs;
+        extraArgs = extraArgs == null ? Collections.emptyList() : extraArgs;
+        customArgs = customArgs == null ? Collections.emptyList() : customArgs;
     }
 }

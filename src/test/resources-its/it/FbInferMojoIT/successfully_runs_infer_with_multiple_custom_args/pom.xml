@@ -39,10 +39,10 @@
         </executions>
         <configuration>
           <failOnIssue>false</failOnIssue>
-          <customInferArgs>
+          <customArgs>
              <arg>help --list-checkers</arg>
              <arg>--list-issue-types</arg>
-          </customInferArgs>
+          </customArgs>
         </configuration>
       </plugin>
     </plugins>
