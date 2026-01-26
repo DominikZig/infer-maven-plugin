@@ -1,0 +1,17 @@
+name: Seqra Analysis
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  seqra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+
+      - name: Run Seqra code analysis
+        uses: seqra/seqra-action@v2
