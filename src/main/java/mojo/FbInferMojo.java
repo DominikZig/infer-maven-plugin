@@ -5,6 +5,8 @@ import core.InferParams;
 import core.InferRunner;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import javax.inject.Inject;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -40,6 +42,12 @@ public class FbInferMojo extends AbstractMojo {
     @Parameter(property = "installDir", defaultValue = "${user.home}/Downloads")
     private File installDir;
 
+    @Parameter(property = "extraArgs")
+    private final List<String> extraArgs = new ArrayList<>();
+
+    @Parameter(property = "customArgs")
+    private final List<String> customArgs = new ArrayList<>();
+
     @Inject
     public FbInferMojo(InferInstaller installer, InferRunner runner) {
         this.installer = installer;
@@ -48,8 +56,14 @@ public class FbInferMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        InferParams inferParams =
-                new InferParams(project, failOnIssue, enableJavaCheckers, resultsDir, installDir.toPath());
+        InferParams inferParams = new InferParams(
+                project,
+                failOnIssue,
+                enableJavaCheckers,
+                resultsDir,
+                installDir.toPath(),
+            extraArgs,
+            customArgs);
 
         Path inferExe = installer.tryInstallInfer(inferParams.installDir());
 

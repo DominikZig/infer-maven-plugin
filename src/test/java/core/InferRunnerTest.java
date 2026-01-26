@@ -90,7 +90,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(true); // expect -g in args since testing 'full' flow
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
 
@@ -140,7 +140,7 @@ class InferRunnerTest {
 
         when(project.getCompileSourceRoots()).thenReturn(List.of(srcMainJava.toString()));
 
-        InferParams inferParams = new InferParams(project, true, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, true, true, resultsDir.toString(), null, null, null);
 
         var mojoFailureException =
                 assertThrows(MojoFailureException.class, () -> runner.runInferOnProject(inferParams, Path.of("infer")));
@@ -187,7 +187,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         // Use a non-existent infer executable inside temp so ProcessBuilder.start throws IOException
         Path missingInfer = dummyJavaProject.projectRoot().resolve("bin").resolve("infer-does-not-exist");
@@ -240,7 +240,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, true, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, true, true, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutableWithExitCode2 = createDummyInferExecutable(tmp, 2, "infer: issues");
 
@@ -293,7 +293,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutableWithExitCode2 = createDummyInferExecutable(tmp, 2, "infer: issues");
 
@@ -333,7 +333,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutableWithExitCode3 = createDummyInferExecutable(tmp, 3, "infer: unexpected");
 
@@ -379,7 +379,7 @@ class InferRunnerTest {
         when(project.getCompileSourceRoots()).thenReturn(List.of(srcMainJava.toString()));
 
         InferParams inferParams = new InferParams(
-                project, false, true, projectRoot.resolve("infer-results").toString(), null);
+                project, false, true, projectRoot.resolve("infer-results").toString(), null, null, null);
 
         // Mock Files.isDirectory and Files.find to throw IOException on discovery
         try (MockedStatic<Files> filesMock = mockStatic(Files.class, CALLS_REAL_METHODS)) {
@@ -438,6 +438,8 @@ class InferRunnerTest {
                 false,
                 true,
                 dummyJavaProject.projectRoot().resolve("infer-results").toString(),
+                null,
+                null,
                 null);
 
         var mojoExecutionException = assertThrows(
@@ -493,7 +495,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(projectRoot.toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer ok");
 
@@ -531,7 +533,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer ok");
 
@@ -572,7 +574,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         // Dummy infer path (won't actually run due to construction mocking)
         Path dummyInferExecutable =
@@ -637,7 +639,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         // Dummy infer path (won't actually run due to construction mocking)
         Path dummyInferExecutable =
@@ -703,7 +705,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(false);
 
-        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, null);
 
         // Dummy infer path (won't actually run due to construction mocking)
         Path dummyInferExecutable =
@@ -737,7 +739,7 @@ class InferRunnerTest {
 
     @Test
     void runInferOnProjectNullMavenProject() {
-        InferParams inferParams = new InferParams(null, false, true, null, null);
+        InferParams inferParams = new InferParams(null, false, true, null, null, null, null);
         var nullPointerException =
                 assertThrows(NullPointerException.class, () -> runner.runInferOnProject(inferParams, null));
         assertThat(nullPointerException)
@@ -774,7 +776,7 @@ class InferRunnerTest {
         when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
         when(logger.isDebugEnabled()).thenReturn(true); // expect -g in args since testing 'full' flow
 
-        InferParams inferParams = new InferParams(project, false, false, resultsDir.toString(), null);
+        InferParams inferParams = new InferParams(project, false, false, resultsDir.toString(), null, null, null);
 
         Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
 
@@ -808,14 +810,320 @@ class InferRunnerTest {
                 .isFalse();
     }
 
+    @DisplayName(
+            """
+ Given a valid Java source\s
+ And and process exits with normal termination flag of 0\s
+ And enableJavaCheckers param is set to false\s
+ And extraArgs provided
+ When running Infer\s
+ Then completes successfully and does not include extra java checkers in Infer args\s
+ and includes extra args in command
+""")
+    @Test
+    void runInferOnProjectEnableJavaCheckersFalseAndExtraArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+
+        Path targetDir = dummyJavaProject.projectRoot().resolve("target");
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        Build build = new Build();
+        build.setDirectory(targetDir.toString());
+        build.setOutputDirectory(targetDir.resolve("classes").toString());
+
+        // Non-empty classpath to assert -classpath is added
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getBuild()).thenReturn(build);
+        when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
+        when(logger.isDebugEnabled()).thenReturn(true); // expect -g in args since testing 'full' flow
+
+        List<String> extraArgs = List.of("--debug");
+        InferParams inferParams = new InferParams(project, false, false, resultsDir.toString(), null, extraArgs, null);
+
+        Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
+
+        runner.runInferOnProject(inferParams, dummyInferExecutable);
+
+        assertThat(Files.exists(resultsDir)).isTrue();
+        Path argfile = targetDir.resolve("java-sources.args");
+        assertThat(Files.exists(argfile)).isTrue();
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
+
+        verify(logger).info("infer: ok");
+        verify(logger).info("Infer analysis completed. Results in: " + resultsDir);
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.startsWith("Running: ")))
+                .isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-classpath")))
+                .isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("-g"))).isTrue();
+
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("--bufferoverrun")))
+                .isFalse();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("--cost")))
+                .isFalse();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("--loop-hoisting")))
+                .isFalse();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains("--biabduction")))
+                .isFalse();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(extraArgs.getFirst())))
+                .isTrue();
+    }
+
+    @DisplayName(
+            """
+        Given a valid Java source
+        And a single extraArgs provided
+        When running Infer
+        Then completes successfully and includes extra args in command
+       """)
+    @Test
+    void runInferOnProjectWithSingleExtraArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+
+        Path targetDir = dummyJavaProject.projectRoot().resolve("target");
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        Build build = new Build();
+        build.setDirectory(targetDir.toString());
+        build.setOutputDirectory(targetDir.resolve("classes").toString());
+
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getBuild()).thenReturn(build);
+        when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        List<String> extraArgs = List.of("--debug");
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, extraArgs, null);
+
+        Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
+
+        runner.runInferOnProject(inferParams, dummyInferExecutable);
+
+        assertThat(Files.exists(resultsDir)).isTrue();
+        Path argfile = targetDir.resolve("java-sources.args");
+        assertThat(Files.exists(argfile)).isTrue();
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
+
+        verify(logger).info("infer: ok");
+        verify(logger).info("Infer analysis completed. Results in: " + resultsDir);
+
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(extraArgs.getFirst())))
+                .isTrue();
+    }
+
+    @DisplayName(
+            """
+     Given a valid Java source
+     And multiple extraArgs provided
+     When running Infer
+     Then completes successfully and includes extra args in command
+    """)
+    @Test
+    void runInferOnProjectWithMultipleExtraArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+
+        Path targetDir = dummyJavaProject.projectRoot().resolve("target");
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        Build build = new Build();
+        build.setDirectory(targetDir.toString());
+        build.setOutputDirectory(targetDir.resolve("classes").toString());
+
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getBuild()).thenReturn(build);
+        when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        List<String> extraArgs = List.of("--debug", "--someotherarg");
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, extraArgs, null);
+
+        Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
+
+        runner.runInferOnProject(inferParams, dummyInferExecutable);
+
+        assertThat(Files.exists(resultsDir)).isTrue();
+        Path argfile = targetDir.resolve("java-sources.args");
+        assertThat(Files.exists(argfile)).isTrue();
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
+
+        verify(logger).info("infer: ok");
+        verify(logger).info("Infer analysis completed. Results in: " + resultsDir);
+
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(extraArgs.getFirst())))
+                .isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(extraArgs.get(1))))
+                .isTrue();
+    }
+
+    @DisplayName(
+            """
+     Given a valid Java source
+     And a single customArgs provided
+     When running Infer
+     Then completes successfully and includes custom args in command
+    """)
+    @Test
+    void runInferOnProjectWithSingleCustomArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+
+        Path targetDir = dummyJavaProject.projectRoot().resolve("target");
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        Build build = new Build();
+        build.setDirectory(targetDir.toString());
+        build.setOutputDirectory(targetDir.resolve("classes").toString());
+
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getBuild()).thenReturn(build);
+        when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        List<String> customArgs = List.of("help");
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, customArgs);
+
+        Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
+
+        runner.runInferOnProject(inferParams, dummyInferExecutable);
+
+        assertThat(Files.exists(resultsDir)).isTrue();
+        Path argfile = targetDir.resolve("java-sources.args");
+        assertThat(Files.exists(argfile)).isTrue();
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
+
+        verify(logger).info("infer: ok");
+        verify(logger).info("Infer analysis completed. Results in: " + resultsDir);
+
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(customArgs.getFirst())))
+                .isTrue();
+    }
+
+    @DisplayName(
+            """
+     Given a valid Java source
+     And multiple customArgs provided
+     When running Infer
+     Then completes successfully and includes custom args in command
+    """)
+    @Test
+    void runInferOnProjectWithMultipleCustomArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+
+        Path targetDir = dummyJavaProject.projectRoot().resolve("target");
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        Build build = new Build();
+        build.setDirectory(targetDir.toString());
+        build.setOutputDirectory(targetDir.resolve("classes").toString());
+
+        when(project.getCompileSourceRoots())
+                .thenReturn(List.of(dummyJavaProject.srcMainJava().toString()));
+        when(project.getCompileClasspathElements())
+                .thenReturn(
+                        List.of(dummyJavaProject.projectRoot().resolve("lib").toString()));
+        when(project.getBuild()).thenReturn(build);
+        when(project.getBasedir()).thenReturn(dummyJavaProject.projectRoot().toFile());
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        List<String> customArgs = List.of("help", "--list-checkers");
+        InferParams inferParams = new InferParams(project, false, true, resultsDir.toString(), null, null, customArgs);
+
+        Path dummyInferExecutable = createDummyInferExecutable(tmp, 0, "infer: ok");
+
+        runner.runInferOnProject(inferParams, dummyInferExecutable);
+
+        assertThat(Files.exists(resultsDir)).isTrue();
+        Path argfile = targetDir.resolve("java-sources.args");
+        assertThat(Files.exists(argfile)).isTrue();
+        assertThat(Files.readAllLines(argfile))
+                .containsExactly(dummyJavaProject.helloJava().toString());
+        assertThat(Files.exists(targetDir.resolve("classes"))).isTrue();
+
+        verify(logger).info("infer: ok");
+        verify(logger).info("Infer analysis completed. Results in: " + resultsDir);
+
+        var debugLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).debug(debugLogCaptor.capture());
+        var debugLogMessages = debugLogCaptor.getAllValues();
+
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(customArgs.getFirst())))
+                .isTrue();
+        assertThat(debugLogMessages.stream().anyMatch(s -> s.contains(customArgs.get(1))))
+                .isTrue();
+    }
+
     @Test
     void runInferOnProjectNullResultsDir() {
-        InferParams inferParams = new InferParams(project, false, true, null, null);
+        InferParams inferParams = new InferParams(project, false, true, null, null, null, null);
         var nullPointerException =
                 assertThrows(NullPointerException.class, () -> runner.runInferOnProject(inferParams, null));
         assertThat(nullPointerException)
                 .hasMessageThat()
                 .isEqualTo("Directory to store results required to proceed with Infer analysis");
+    }
+
+    @DisplayName(
+    """
+     Given a valid Java source
+     And customArgs provided
+     And extraArgs provided
+     When running Infer
+     Then throws MojoExecutionException
+     """)
+    @Test
+    void runInferOnProjectBothCustomAndExtraArgs(@TempDir Path tmp) throws Exception {
+        DummyJavaProject dummyJavaProject = createDummyJavaProject(tmp);
+        Path resultsDir = dummyJavaProject.projectRoot().resolve("infer-results");
+
+        InferParams inferParams =
+                new InferParams(project, false, true, resultsDir.toString(), null, List.of("--debug"), List.of("help"));
+        var mojoExecutionException =
+                assertThrows(MojoExecutionException.class, () -> runner.runInferOnProject(inferParams, null));
+
+        assertThat(mojoExecutionException.getMessage()).isEqualTo("Multiple Infer arg parameters provided");
+
+        var errorLogCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger).error(errorLogCaptor.capture());
+        var errorLogMessage = errorLogCaptor.getValue();
+        assertThat(errorLogMessage).contains("You cannot provide both extraArgs and customArgs parameters");
     }
 
     private DummyJavaProject createDummyJavaProject(Path tmp) throws IOException {
