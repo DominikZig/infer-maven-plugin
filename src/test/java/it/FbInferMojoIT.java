@@ -265,36 +265,75 @@ class FbInferMojoIT {
     }
 
     @MavenTest
-    void successfully_runs_infer_with_extra_args_help_list_checkers(MavenExecutionResult result) {
-        assertThat(result).isSuccessful();
-        assertThat(result).out().info().anySatisfy(line -> assertThat(line).contains("biabduction"));
-        assertThat(result).out().info().anySatisfy(line -> assertThat(line).contains("bufferoverrun"));
-        // Ensure help command doesn't actually run analysis but just prints help/checkers
-        // The presence of checker names in output confirms the arg was passed
-    }
-
-    @MavenTest
     void successfully_runs_infer_with_extra_args_debug(MavenExecutionResult result) {
         assertThat(result).isFailure();
         Path inferOut = result.getMavenProjectResult()
-            .getTargetProjectDirectory()
-            .resolve("target")
-            .resolve("infer-out");
+                .getTargetProjectDirectory()
+                .resolve("target")
+                .resolve("infer-out");
         assertThat(inferOut).isDirectory();
         Path expectedReportPath = Path.of(
-            "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_with_extra_args_debug/expectedInferReport.txt");
+                "src/test/resources-its/it/FbInferMojoIT/successfully_runs_infer_with_extra_args_debug/expectedInferReport.txt");
         assertThat(inferOut.resolve("report.txt")).hasSameTextualContentAs(expectedReportPath);
 
         List<String> expectedMavenLogs = List.of(
-            "Found 3 issues",
-            "             Issue Type(ISSUED_TYPE_ID): #",
-            "     Null Dereference(NULL_DEREFERENCE): 1",
-            "  Null Dereference(NULLPTR_DEREFERENCE): 1",
-            "           Bad Footprint(Bad_footprint): 1");
+                "Found 3 issues",
+                "             Issue Type(ISSUED_TYPE_ID): #",
+                "     Null Dereference(NULL_DEREFERENCE): 1",
+                "  Null Dereference(NULLPTR_DEREFERENCE): 1",
+                "           Bad Footprint(Bad_footprint): 1");
         assertThat(result).out().info().containsAll(expectedMavenLogs);
         assertThat(result).out().warn().contains(INFER_ISSUES_FOUND);
 
-        //assert debug specific log statement appears
+        // assert debug specific log statement appears
         assertThat(result).out().info().contains("Logs in " + inferOut + "/logs");
+    }
+
+    @MavenTest
+    void successfully_runs_infer_with_custom_args_help_list_checkers(MavenExecutionResult result) {
+        // Ensure help command doesn't actually run analysis but just prints help/checkers
+        // The presence of checker names in output confirms the arg was passed
+        assertThat(result).isSuccessful();
+        assertThat(result)
+                .out()
+                .info()
+                .contains("Checker ID:kind:clang support:Java support:enabled by default:activates");
+        assertThat(result).out().info().contains("annotation-reachability:UserFacing:No:Yes:false:");
+        assertThat(result).out().info().contains("topl:UserFacing:Experimental:Experimental:false:pulse");
+    }
+
+    @MavenTest
+    void successfully_runs_infer_with_multiple_custom_args(MavenExecutionResult result) {
+        // Ensure help command doesn't actually run analysis but just prints help/checkers
+        // The presence of checker names in output confirms the arg was passed
+        // Should print issue list as well
+        assertThat(result).isSuccessful();
+        assertThat(result)
+                .out()
+                .info()
+                .contains("Checker ID:kind:clang support:Java support:enabled by default:activates");
+        assertThat(result).out().info().contains("annotation-reachability:UserFacing:No:Yes:false:");
+        assertThat(result).out().info().contains("topl:UserFacing:Experimental:Experimental:false:pulse");
+        assertThat(result)
+                .out()
+                .info()
+                .contains(
+                        "ARBITRARY_CODE_EXECUTION_UNDER_LOCK:Arbitrary Code Execution Under lock:User:No_category:ERROR:true:starvation");
+        assertThat(result)
+                .out()
+                .info()
+                .contains("BUFFER_OVERRUN_L1:Buffer Overrun L1:User:No_category:ERROR:true:bufferoverrun");
+        assertThat(result)
+                .out()
+                .info()
+                .contains("INTEGER_OVERFLOW_L1:Integer Overflow L1:User:No_category:ERROR:true:bufferoverrun");
+    }
+
+    @MavenTest
+    void unsuccessfully_runs_infer_multiple_args_provided(MavenExecutionResult result) {
+        assertThat(result).isFailure();
+
+        // assert error validation message
+        assertThat(result).out().error().contains("You cannot provide both extraArgs and customArgs parameters");
     }
 }
