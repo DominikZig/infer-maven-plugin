@@ -8,6 +8,8 @@ on:
 
 jobs:
   seqra:
+    permissions:
+      contents: read # for actions/checkout to fetch code
     runs-on: ubuntu-latest
     steps:
       - name: Checkout your repository
