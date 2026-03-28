@@ -1,4 +1,4 @@
-package core;
+package io.github.dominikzig.infer.maven.plugin.core;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -49,7 +50,7 @@ public class InferRunner {
 
     @Inject
     public InferRunner(Logger logger) {
-        this.logger = logger;
+        this.logger = Objects.requireNonNull(logger, "logger must not be null");
     }
 
     public void runInferOnProject(InferParams inferParams, Path inferExe)
@@ -153,7 +154,8 @@ public class InferRunner {
     }
 
     private static boolean isJavaFileType(Path path) {
-        return path.getFileName().toString().endsWith(JAVA_FILE_EXTENSION);
+        String fileName = path.getFileName().toString();
+        return fileName.toLowerCase(Locale.ROOT).endsWith(JAVA_FILE_EXTENSION);
     }
 
     private String buildCompileClasspathFromProjectArtifacts(MavenProject project) throws MojoExecutionException {
@@ -259,7 +261,7 @@ public class InferRunner {
                 logger.error(
                         "An error occurred during Infer due to timeout running command. See stacktrace for more info.");
                 throw new MojoExecutionException(
-                        "Infer analysis errored with timeout running command: " + inferCommands.getFirst());
+                        "Infer analysis errored with timeout running command: " + inferCommands.get(0));
             }
 
         } catch (InterruptedException e) {
@@ -267,7 +269,7 @@ public class InferRunner {
             logger.error(
                     "An error occurred during Infer due to an interruption in the thread running command. See stacktrace for more info.");
             throw new MojoExecutionException(
-                    "Infer analysis errored with interrupted running command: " + inferCommands.getFirst(), e);
+                    "Infer analysis errored with interrupted running command: " + inferCommands.get(0), e);
         }
 
         int exitCode = process.exitValue();
